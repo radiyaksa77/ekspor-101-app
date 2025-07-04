@@ -1,6 +1,6 @@
 // Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // Corrected URL
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Your web app's Firebase configuration
@@ -75,7 +75,7 @@ const privateChatErrorMessage = document.getElementById('privateChatErrorMessage
 let currentAuthMode = 'login'; // 'login' or 'register'
 let activePrivateChatId = null; // Stores the ID of the currently active private chat
 let activePrivateChatListener = null; // Stores the unsubscribe function for private chat messages
-let activePrivateChats = {}; // Stores details of active private chats {chatId: {recipientId, recipientName}}
+let activePrivateChats = {}; // Stores details of active private chats {recipientId: {chatId, recipientId, recipientName}}
 
 // Profile Elements
 const profileUsernameDisplay = document.getElementById('profileUsername');
@@ -137,6 +137,8 @@ function showMessageBox(message, type = 'error', targetElement = authError, targ
         targetElement.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
     } else if (type === 'warning') {
         targetElement.classList.add('bg-yellow-100', 'border-yellow-400', 'text-yellow-700');
+    } else if (type === 'success') {
+        targetElement.classList.add('bg-green-100', 'border-green-400', 'text-green-700'); // Added success styling
     }
     setTimeout(() => {
         targetElement.classList.add('hidden');
