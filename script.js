@@ -30,7 +30,7 @@ let userRandomId = null; // ID acak pengguna
 const authPage = document.getElementById('authPage');
 const mainApp = document.getElementById('mainApp');
 const emailInput = document.getElementById('emailInput');
-const passwordInput = document.getElementById('passwordInput'); // Corrected typo here
+const passwordInput = document.getElementById('passwordInput');
 const authSubmitBtn = document.getElementById('authSubmitBtn');
 const toggleAuthBtn = document.getElementById('toggleAuthBtn');
 const authTitle = document.getElementById('authTitle');
@@ -1509,4 +1509,83 @@ contactSupportBtn.addEventListener('click', () => {
 
 
 // --- Inisialisasi Aplikasi ---
+
+// New function to initialize Firebase and handle auth state
+async function initializeFirebase() {
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                currentUserIdDisplay.textContent = `ID Anda: ${userId}`; // Display actual Firebase UID
+
+                // Fetch user profile from Firestore to get username and randomUserId
+                const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    username = userData.username;
+                    userRandomId = userData.randomUserId;
+                    // If username is null/undefined in Firestore, use email part as fallback
+                    if (!username) {
+                        username = user.email ? user.email.split('@')[0] : 'Anonim';
+                        await updateDoc(userDocRef, { username: username });
+                    }
+                    // If randomUserId is null/undefined, generate and save
+                    if (!userRandomId) {
+                        userRandomId = generateRandomUserId();
+                        await updateDoc(userDocRef, { randomUserId: userRandomId });
+                    }
+                } else {
+                    // User exists in Auth but not in Firestore (e.g., first login after old data wipe)
+                    username = user.email ? user.email.split('@')[0] : 'Anonim';
+                    userRandomId = generateRandomUserId();
+                    await setDoc(userDocRef, {
+                        email: user.email,
+                        username: username,
+                        randomUserId: userRandomId,
+                        createdAt: serverTimestamp(),
+                        messageCount: 0
+                    });
+                    console.log("Profil pengguna Firestore dibuat untuk pengguna yang sudah ada di Auth.");
+                }
+
+                // Show main app and hide auth page
+                authPage.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                userIdDisplay.classList.remove('hidden');
+
+                // Set initial page to Forum and start its listeners
+                showPage(forumPage);
+                showBannerAd(); // Show banner ad on app load
+
+            } else {
+                // User is signed out
+                userId = null;
+                username = null;
+                userRandomId = null;
+                authPage.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+                userIdDisplay.classList.add('hidden');
+                currentUserIdDisplay.textContent = ''; // Clear display
+
+                // Stop all listeners when user logs out
+                if (forumMessagesListener) forumMessagesListener();
+                if (allUsersListener) allUsersListener();
+                if (activePrivateChatListener) activePrivateChatListener();
+                if (privateChatsListener) privateChatsListener();
+                if (incomingChatRequestsListener) incomingChatRequestsListener();
+                if (userProfileListener) userProfileListener();
+            }
+        });
+    } catch (error) {
+        console.error("Kesalahan inisialisasi Firebase:", error);
+        showMessageBox("Gagal menginisialisasi aplikasi. Coba lagi nanti.", 'error', authError, authErrorMessage, 10000);
+    }
+}
+
 window.onload = initializeFirebase;
