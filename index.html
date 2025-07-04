@@ -3,239 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Ekspor 101</title>
+    <title>Ekspor 101 App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Link to your custom CSS -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            margin: 0;
+            padding-bottom: 60px; /* Space for fixed banner ad */
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 1rem;
+            flex-grow: 1; /* Allow content to grow and push footer/ad down */
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: #ffffff;
+            padding: 1rem;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; /* Make header sticky */
+            top: 0;
+            z-index: 20; /* Ensure it's above other content */
+        }
+        .nav-button.active {
+            font-weight: bold;
+            color: #3b82f6; /* Tailwind blue-500 */
+        }
+        .page-content {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            flex-grow: 1; /* Allow page content to fill available space */
+            margin-top: 1rem; /* Space from header */
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .chat-input-form {
+            display: flex;
+            margin-top: 1rem;
+        }
+        .chat-input-form input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-right: 0.5rem;
+        }
+        .chat-input-form button {
+            padding: 0.75rem 1.25rem;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .auth-card {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            max-width: 400px;
+            margin: 2rem auto;
+            text-align: center;
+        }
+        .auth-card input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .auth-card button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .auth-error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .ad-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            padding: 0.5rem 0;
+            text-align: center;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+            z-index: 100; /* Ensure it's above other content */
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .ad-banner img {
+            max-width: 100%;
+            height: 50px; /* Fixed height for banner ad */
+            object-fit: contain;
+        }
+        .profile-section {
+            background-color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .member-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #f8fafc;
+        }
+        .member-list li {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .member-list li:last-child {
+            border-bottom: none;
+        }
+        .active-chats-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .active-chats-container button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-chat-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .delete-message-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem; /* Smaller icon for message delete */
+        }
+        .private-chat-view {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #f8fafc;
+            margin-top: 1rem;
+        }
+        .bulletin-board {
+            margin-top: 1.5rem;
+        }
+    </style>
 </head>
-<body class="flex flex-col h-screen antialiased">
-
-    <!-- Tampilan ID Pengguna (untuk debugging/identifikasi) -->
-    <div id="userIdDisplay" class="bg-blue-600 text-white p-3 text-center text-sm font-medium rounded-b-lg shadow-md hidden">
-        ID Pengguna Anda: <span id="currentUserId">Memuat...</span>
-        <button id="logoutBtn" class="ml-4 px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-md text-sm">Keluar</button>
-    </div>
-
-    <!-- Halaman Login/Daftar -->
-    <div id="authPage" class="flex-1 flex flex-col items-center justify-center p-4 bg-gray-100">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center" id="authTitle">Masuk</h2>
-
-            <!-- Tampilan Pesan Kesalahan -->
-            <div id="authError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
-                <span class="block sm:inline" id="authErrorMessage"></span>
-            </div>
-
-            <input type="email" id="emailInput" placeholder="Email"
-                   class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-            <input type="password" id="passwordInput" placeholder="Kata Sandi"
-                   class="w-full p-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-
-            <button id="authSubmitBtn"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 mb-4">
-                Masuk
-            </button>
-            <button id="toggleAuthBtn"
-                    class="w-full text-blue-600 hover:text-blue-800 font-semibold py-2 rounded-lg transition duration-300 ease-in-out">
-                Belum punya akun? Daftar
-            </button>
+<body class="bg-gray-100">
+    <!-- Authentication Page -->
+    <div id="authPage" class="auth-card">
+        <h2 id="authTitle" class="text-3xl font-bold text-gray-800 mb-6">Masuk</h2>
+        <div id="authError" class="auth-error hidden">
+            <p id="authErrorMessage"></p>
         </div>
+        <input type="email" id="emailInput" placeholder="Email" class="block w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3">
+        <input type="password" id="passwordInput" placeholder="Kata Sandi" class="block w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+        <button id="authSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-md">Masuk</button>
+        <button id="toggleAuthBtn" class="mt-4 text-blue-600 hover:underline">Belum punya akun? Daftar</button>
     </div>
 
-    <!-- Kontainer Aplikasi Utama (Tersembunyi sampai terautentikasi) -->
-    <div id="mainApp" class="flex-1 flex flex-col hidden">
-        <!-- Bilah Navigasi Utama -->
-        <nav class="bg-white p-4 shadow-lg flex justify-around items-center rounded-b-xl z-10">
-            <button id="navForum" class="nav-btn flex flex-col items-center text-blue-600 relative">
-                <i class="fas fa-comments text-2xl mb-1"></i>
-                <span class="text-xs font-semibold">Forum</span>
-                <span id="forumAdTimer" class="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded-full hidden"></span>
-            </button>
-            <button id="navPrivateChat" class="nav-btn flex flex-col items-center text-gray-500 relative">
-                <i class="fas fa-user-friends text-2xl mb-1"></i>
-                <span class="text-xs font-semibold">Obrolan Pribadi</span>
-                <span id="privateChatRequestBadge" class="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded-full hidden">0</span>
-            </button>
-            <button id="navEkspor101" class="nav-btn flex flex-col items-center text-gray-500">
-                <i class="fas fa-book text-2xl mb-1"></i>
-                <span class="text-xs font-semibold">Ekspor 101</span>
-            </button>
-            <button id="navProfile" class="nav-btn flex flex-col items-center text-gray-500">
-                <i class="fas fa-user-circle text-2xl mb-1"></i>
-                <span class="text-xs font-semibold">Profil</span>
-            </button>
-            <button id="navDonate" class="nav-btn flex flex-col items-center text-gray-500">
-                <i class="fas fa-hand-holding-usd text-2xl mb-1"></i>
-                <span class="text-xs font-semibold">Donasi</span>
-            </button>
-        </nav>
-
-        <!-- Area Konten Halaman -->
-        <div class="flex-1 overflow-hidden p-4 pb-16"> <!-- Added pb-16 for banner ad space -->
-
-            <!-- Halaman Forum -->
-            <div id="forumPage" class="page-content flex flex-col h-full">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Forum Universal</h2>
-                <div id="forumMessages" class="flex-1 overflow-y-auto bg-white p-4 rounded-xl shadow-lg mb-4 flex flex-col space-y-3 chat-messages">
-                    <div class="text-center text-gray-500 text-sm italic">
-                        Memuat pesan forum...
-                    </div>
-                </div>
-                <!-- Pagination / Load More Button for Forum -->
-                <button id="loadMoreForumMessagesBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 mb-4 hidden">
-                    Muat Lebih Banyak Pesan
+    <!-- Main Application Interface -->
+    <div id="mainApp" class="container hidden">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="text-2xl font-bold text-gray-800">Ekspor 101</h1>
+            <nav class="flex space-x-4">
+                <button id="navForum" class="nav-button text-gray-500 hover:text-blue-600 transition duration-200">Forum</button>
+                <button id="navEkspor101" class="nav-button text-gray-500 hover:text-blue-600 transition duration-200">Ekspor 101</button>
+                <button id="navPrivateChat" class="nav-button text-gray-500 hover:text-blue-600 transition duration-200 relative">
+                    Obrolan Pribadi
+                    <span id="privateChatRequestBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
                 </button>
-                <form id="forumMessageForm" class="flex items-center bg-white p-3 rounded-xl shadow-lg">
-                    <input type="text" id="forumMessageInput" placeholder="Ketik pesan Anda..."
-                           class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                    <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-r-lg transition duration-300 ease-in-out transform hover:scale-105 ml-2">
-                        Kirim
-                    </button>
+                <button id="navProfile" class="nav-button text-gray-500 hover:text-blue-600 transition duration-200">Profil</button>
+                <button id="navDonate" class="nav-button text-gray-500 hover:text-blue-600 transition duration-200">Donasi</button>
+            </nav>
+            <!-- User ID display removed from here as per request -->
+        </header>
+
+        <!-- Page Contents -->
+        <main class="flex-grow">
+            <!-- Forum Page -->
+            <section id="forumPage" class="page-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Forum Diskusi</h2>
+                <div id="forumAdTimer" class="text-center text-red-500 text-sm italic mb-4 hidden"></div>
+                <div id="forumMessages" class="chat-messages mb-4">
+                    <!-- Messages will be loaded here by JavaScript -->
+                    <div class="text-center text-gray-500 text-sm italic">Memuat pesan...</div>
+                </div>
+                <button id="loadMoreForumMessagesBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 mb-4 hidden">Muat Pesan Lama</button>
+                <form id="forumMessageForm" class="chat-input-form">
+                    <input type="text" id="forumMessageInput" placeholder="Ketik pesan Anda..." class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-md ml-2">Kirim</button>
                 </form>
-            </div>
+            </section>
 
-            <!-- Halaman Ekspor 101 -->
-            <div id="ekspor101Page" class="page-content hidden flex flex-col h-full bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Ekspor 101 - Konten Edukasi</h2>
-                <div class="text-center text-gray-600">
-                    <p class="mb-4">Bagian ini akan menampilkan direktori kurasi artikel edukasi, video, dan sumber daya terkait ekspor dan perdagangan internasional.</p>
-                    <p class="text-xl font-semibold text-blue-500">Segera Hadir!</p>
-                    <img src="https://placehold.co/300x200/ADD8E6/000000?text=Konten+Edukasi" alt="Placeholder Konten Edukasi" class="mx-auto mt-6 rounded-lg shadow-md">
-                </div>
-            </div>
-
-            <!-- Halaman Obrolan Pribadi -->
-            <div id="privateChatPage" class="page-content hidden flex flex-col h-full">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Obrolan Pribadi</h2>
-
-                <!-- Kotak Pesan Kustom untuk Batas Obrolan Pribadi -->
-                <div id="privateChatMessageBox" class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
-                    <span class="block sm:inline" id="privateChatErrorMessage"></span>
-                </div>
-
-                <div class="flex-1 flex flex-col lg:flex-row gap-4">
-                    <!-- Permintaan Obrolan Masuk -->
-                    <div class="lg:w-1/2 bg-white p-4 rounded-xl shadow-lg overflow-y-auto mb-4 lg:mb-0">
-                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Permintaan Obrolan Masuk</h3>
-                        <ul id="incomingRequestsList" class="space-y-2">
-                            <li class="text-gray-500 text-sm italic">Tidak ada permintaan obrolan masuk.</li>
-                        </ul>
+            <!-- Ekspor 101 Page -->
+            <section id="ekspor101Page" class="page-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Ekspor 101: Sumber Daya & Info</h2>
+                <p class="text-gray-700 mb-6">Temukan panduan, artikel, dan informasi penting seputar dunia ekspor.</p>
+                <div class="bulletin-board">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Papan Buletin</h3>
+                    <div id="bulletinBoard" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <!-- Bulletin updates will be loaded here by JavaScript -->
+                        <p class="text-center text-gray-500 italic">Memuat pengumuman...</p>
                     </div>
+                </div>
+            </section>
 
-                    <!-- Obrolan Pribadi Aktif / Tampilan Obrolan Terpilih -->
-                    <div class="lg:w-1/2 flex flex-col bg-white p-4 rounded-xl shadow-lg">
-                        <div id="activeChatsList" class="mb-4">
-                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Obrolan Pribadi Aktif Anda (<span id="activeChatCount">0</span>/3)</h3>
-                            <div id="activeChatsContainer" class="flex flex-wrap gap-2">
-                                <span class="text-gray-500 text-sm italic">Tidak ada obrolan aktif. Klik anggota untuk memulai!</span>
-                            </div>
+            <!-- Private Chat Page -->
+            <section id="privateChatPage" class="page-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Obrolan Pribadi</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Anggota Lain</h3>
+                        <div class="member-list">
+                            <ul id="memberList">
+                                <!-- Members will be loaded here by JavaScript -->
+                            </ul>
                         </div>
 
-                        <div id="selectedPrivateChatView" class="flex-1 flex flex-col border border-gray-200 rounded-lg p-3 hidden">
-                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Obrolan dengan: <span id="privateChatRecipientName"></span></h3>
-                            <div id="privateChatMessages" class="flex-1 overflow-y-auto bg-gray-50 p-3 rounded-lg mb-3 flex flex-col space-y-3 chat-messages">
-                                <div class="text-center text-gray-500 text-sm italic">
-                                    Pilih obrolan atau mulai yang baru.
-                                </div>
-                            </div>
-                            <form id="privateMessageForm" class="flex items-center">
-                                <input type="text" id="privateMessageInput" placeholder="Ketik pesan pribadi Anda..."
-                                       class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                                <button type="submit"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-r-lg transition duration-300 ease-in-out transform hover:scale-105 ml-2">
-                                    Kirim
-                                </button>
-                            </form>
+                        <h3 class="text-xl font-bold text-gray-800 mt-6 mb-3">Permintaan Masuk (<span id="privateChatRequestBadge" class="bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 inline-flex items-center justify-center hidden">0</span>)</h3>
+                        <div class="member-list">
+                            <ul id="incomingRequestsList">
+                                <!-- Incoming chat requests will be loaded here by JavaScript -->
+                            </ul>
+                        </div>
+
+                        <h3 class="text-xl font-bold text-gray-800 mt-6 mb-3">Obrolan Aktif (<span id="activeChatCount">0</span>/3)</h3>
+                        <div id="activeChatsContainer" class="active-chats-container">
+                            <!-- Active chats will be loaded here by JavaScript -->
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Halaman Profil -->
-            <div id="profilePage" class="page-content hidden flex flex-col h-full bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Profil Anda</h2>
-                <div class="text-center mb-6">
-                    <p class="text-lg text-gray-700 mb-2">Nama Pengguna: <span id="profileUsername" class="font-semibold text-blue-600">Memuat...</span></p>
-                    <p class="text-lg text-gray-700 mb-2">ID Pengguna: <span id="profileUserId" class="font-semibold text-gray-600">Memuat...</span></p>
-                    <p class="text-lg text-gray-700 mt-4">Statistik: <span class="font-semibold text-gray-500">Segera Hadir!</span></p>
-                    <p class="text-sm text-gray-500 mt-2">Total Pesan Terkirim: <span id="profileMessageCount">0</span></p>
-                </div>
-
-                <!-- Perbarui Profil -->
-                <div class="w-full max-w-md mx-auto bg-gray-50 p-6 rounded-xl shadow-md mb-6">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Perbarui Profil</h3>
-                    <input type="text" id="newUsernameInput" placeholder="Nama Pengguna Baru"
-                           class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                    <button id="updateUsernameBtn"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                        Perbarui Nama Pengguna
-                    </button>
-                    <input type="password" id="newPasswordInput" placeholder="Kata Sandi Baru (min 6 karakter)"
-                           class="w-full p-3 mt-4 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                    <button id="updatePasswordBtn"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                        Perbarui Kata Sandi
-                    </button>
-                    <div id="profileUpdateMessage" class="mt-3 text-sm text-center hidden"></div>
-                </div>
-
-                <!-- Cari Pengguna -->
-                <div class="w-full max-w-md mx-auto bg-gray-50 p-6 rounded-xl shadow-md">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Cari Pengguna</h3>
-                    <input type="text" id="findUserInput" placeholder="Cari berdasarkan Nama Pengguna atau ID Pengguna"
-                           class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                    <button id="findUserBtn"
-                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                        Cari
-                    </button>
-                    <div id="findUserMessage" class="mt-3 text-sm text-center hidden"></div>
-                    <div id="foundUserProfile" class="mt-4 p-4 bg-white rounded-lg shadow-inner hidden">
-                        <h4 class="font-bold text-lg text-gray-800 mb-2">Profil Ditemukan:</h4>
-                        <p class="text-gray-700">Nama Pengguna: <span id="foundUsername" class="font-semibold"></span></p>
-                        <p class="text-gray-700">ID Pengguna: <span id="foundUserId" class="font-semibold"></span></p>
-                        <button id="sendPmRequestBtn"
-                                class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                            Kirim Permintaan Obrolan Pribadi
-                        </button>
-                        <div id="sendPmRequestMessage" class="mt-3 text-sm text-center hidden"></div>
+                    <div id="selectedPrivateChatView" class="private-chat-view hidden">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Obrolan dengan <span id="privateChatRecipientName" class="text-blue-600"></span></h3>
+                        <div id="privateChatMessageBox" class="auth-error hidden">
+                            <p id="privateChatErrorMessage"></p>
+                        </div>
+                        <div id="privateChatMessages" class="chat-messages mb-4">
+                            <!-- Private messages will be loaded here by JavaScript -->
+                        </div>
+                        <form id="privateMessageForm" class="chat-input-form">
+                            <input type="text" id="privateMessageInput" placeholder="Ketik pesan pribadi Anda..." class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-md ml-2">Kirim</button>
+                        </form>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Halaman Donasi -->
-            <div id="donatePage" class="page-content hidden flex flex-col items-center justify-center h-full bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dukung Ekspor 101</h2>
-                <p class="text-lg text-gray-700 mb-6 text-center max-w-prose">
-                    Kontribusi Anda yang murah hati membantu kami memelihara dan meningkatkan aplikasi ini, membawa konten dan fitur yang lebih berharga bagi komunitas Ekspor 101. Setiap donasi, sekecil apa pun, membuat perbedaan besar!
-                </p>
-                <div class="bg-gray-100 p-6 rounded-lg shadow-md text-center">
-                    <p class="text-xl font-semibold text-blue-600 mb-4">Pindai untuk Donasi:</p>
-                    <!-- Placeholder for QR Code -->
-                    <img src="https://placehold.co/200x200/28A745/FFFFFF?text=QR+Code+Disini" alt="QR Code Donasi" class="mx-auto rounded-lg shadow-md mb-4">
-                    <p class="text-sm text-gray-500">Terima kasih atas dukungan Anda!</p>
+            <!-- Profile Page -->
+            <section id="profilePage" class="page-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Profil Pengguna</h2>
+
+                <div class="profile-section">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Informasi Akun</h3>
+                    <p class="text-gray-700 mb-2">Nama Pengguna: <span id="profileUsername" class="font-bold text-blue-600"></span></p>
+                    <p class="text-gray-700 mb-2">ID Pengguna: <span id="profileUserId" class="font-bold text-blue-600"></span></p>
+                    <p class="text-gray-700 mb-4">Jumlah Pesan Forum: <span id="profileMessageCount" class="font-bold text-blue-600">0</span></p>
+
+                    <div id="profileUpdateMessage" class="auth-error hidden"></div>
+
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">Perbarui Nama Pengguna</h4>
+                    <input type="text" id="newUsernameInput" placeholder="Nama pengguna baru" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3">
+                    <button id="updateUsernameBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md">Perbarui Nama Pengguna</button>
+
+                    <h4 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Perbarui Kata Sandi</h4>
+                    <input type="password" id="newPasswordInput" placeholder="Kata sandi baru (min. 6 karakter)" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3">
+                    <button id="updatePasswordBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md">Perbarui Kata Sandi</button>
+
+                    <button id="profileLogoutBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md mt-6">Keluar</button>
                 </div>
-                <button id="contactSupportBtn"
-                        class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                    Hubungi Dukungan
-                </button>
-            </div>
 
-        </div>
+                <div class="profile-section mt-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Cari Pengguna Lain</h3>
+                    <div id="findUserMessage" class="auth-error hidden"></div>
+                    <div class="flex mb-4">
+                        <input type="text" id="findUserInput" placeholder="Cari nama pengguna atau ID pengguna" class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mr-2">
+                        <button id="findUserBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md">Cari</button>
+                    </div>
+                    <div id="foundUserProfile" class="bg-gray-100 p-4 rounded-lg border border-gray-200 hidden">
+                        <p class="text-gray-700 mb-2">Nama Pengguna: <span id="foundUsername" class="font-bold text-blue-600"></span></p>
+                        <p class="text-gray-700 mb-4">ID Pengguna: <span id="foundUserId" class="font-bold text-blue-600"></span></p>
+                        <button id="sendPmRequestBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md">Kirim Permintaan Obrolan Pribadi</button>
+                        <div id="sendPmRequestMessage" class="auth-error hidden mt-2"></div>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Static Banner Ad Placeholder -->
-        <div id="bannerAd" class="fixed bottom-0 left-0 right-0 bg-gray-200 p-2 text-center text-sm shadow-lg z-20">
-            <!-- Placeholder for your banner ad -->
-            <img src="https://placehold.co/320x50/FFD700/000000?text=Banner+Iklan" alt="Banner Iklan" class="mx-auto w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl">
+            <!-- Donate Page -->
+            <section id="donatePage" class="page-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Donasi & Dukungan</h2>
+                <p class="text-gray-700 mb-4">Aplikasi ini dikembangkan secara sukarela. Jika Anda merasa terbantu dan ingin mendukung pengembangan lebih lanjut, pertimbangkan untuk berdonasi.</p>
+                <p class="text-gray-700 mb-6">Dukungan Anda sangat berarti!</p>
+                <button id="contactSupportBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-md">Hubungi Dukungan</button>
+            </section>
+        </main>
+
+        <!-- Static Banner Ad at the bottom -->
+        <div id="bannerAd" class="ad-banner">
+            <img src="https://placehold.co/320x50/FFD700/000000?text=Iklan+Anda+Di+Sini" alt="Banner Iklan">
         </div>
     </div>
 
-    <!-- Link to your JavaScript file -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
