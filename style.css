@@ -31,3 +31,16 @@ body {
 .nav-btn:hover {
     background-color: #f0f9ff; /* Even lighter blue on hover */
 }
+
+/* Specific styles for private chat request badge */
+#privateChatRequestBadge {
+    min-width: 1.25rem; /* Ensure it's a circle */
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem; /* Smaller font for badge */
+    line-height: 1; /* Adjust line height */
+    padding: 0.125rem 0.375rem; /* Adjust padding */
+    transform: translate(50%, -50%); /* Position correctly */
+}
