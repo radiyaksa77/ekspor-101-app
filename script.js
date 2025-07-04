@@ -99,7 +99,7 @@ const newPasswordInput = document.getElementById('newPasswordInput');
 const updateUserPasswordBtn = document.getElementById('updatePasswordBtn'); // Renamed to avoid conflict
 const profileUpdateMessage = document.getElementById('profileUpdateMessage');
 const findUserInput = document.getElementById('findUserInput');
-const findUserBtn = document = document.getElementById('findUserBtn');
+const findUserBtn = document.getElementById('findUserBtn'); // Corrected from document = document.getElementById
 const findUserMessage = document.getElementById('findUserMessage');
 const foundUserProfile = document.getElementById('foundUserProfile');
 const foundUsernameDisplay = document.getElementById('foundUsername');
