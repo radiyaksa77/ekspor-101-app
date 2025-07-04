@@ -1,7 +1,9 @@
 // Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // Corrected URL
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, where, getDocs, runTransaction, limit, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Localforage for IndexedDB caching
+import localforage from "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -58,8 +60,11 @@ const pageContents = [forumPage, ekspor101Page, privateChatPage, profilePage, do
 const forumMessages = document.getElementById('forumMessages');
 const forumMessageInput = document.getElementById('forumMessageInput');
 const forumMessageForm = document.getElementById('forumMessageForm');
-const onlineCountDisplay = document.getElementById('onlineCount');
+const loadMoreForumMessagesBtn = document.getElementById('loadMoreForumMessagesBtn');
 const forumAdTimerDisplay = document.getElementById('forumAdTimer');
+
+let lastVisibleForumMessage = null; // Untuk paginasi forum
+const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
 
 // Elemen Obrolan Pribadi
 const incomingRequestsList = document.getElementById('incomingRequestsList');
@@ -107,6 +112,26 @@ const contactSupportBtn = document.getElementById('contactSupportBtn');
 // Ad Placeholders
 const bannerAd = document.getElementById('bannerAd');
 
+// --- Inisialisasi IndexedDB dengan localforage ---
+const forumMessagesDB = localforage.createInstance({
+    name: "ekspor101_app",
+    storeName: "forum_messages",
+    description: "Pesan forum yang di-cache secara lokal"
+});
+
+const privateMessagesDB = localforage.createInstance({
+    name: "ekspor101_app",
+    storeName: "private_messages",
+    description: "Pesan pribadi yang di-cache secara lokal"
+});
+
+const chatRequestsDB = localforage.createInstance({
+    name: "ekspor101_app",
+    storeName: "chat_requests",
+    description: "Permintaan obrolan pribadi yang di-cache secara lokal"
+});
+
+
 // --- Fungsi Utilitas ---
 
 // Fungsi untuk menggulir obrolan ke bawah
@@ -117,7 +142,7 @@ function scrollToBottom(element) {
 }
 
 // Fungsi untuk menampilkan pesan di UI obrolan
-function displayChatMessage(message, targetElement, isPrivate = false) { // Added isPrivate parameter
+function displayChatMessage(message, targetElement, isPrivate = false, prepend = false) { // Added prepend parameter
     const messageElement = document.createElement('div');
     messageElement.classList.add('flex', 'items-start', 'space-x-2');
 
@@ -150,8 +175,12 @@ function displayChatMessage(message, targetElement, isPrivate = false) { // Adde
             </div>
         </div>
     `;
-    targetElement.appendChild(messageElement);
-    scrollToBottom(targetElement);
+    if (prepend) {
+        targetElement.prepend(messageElement);
+    } else {
+        targetElement.appendChild(messageElement);
+    }
+
 
     // Add event listener for clicking username in forum
     if (!isPrivate) { // Only for forum messages
@@ -270,12 +299,6 @@ function toggleAuthMode() {
 
 async function handleLogout() {
     try {
-        // Hapus status online dari Firestore
-        if (userId) {
-            const presenceRef = doc(db, `artifacts/${appId}/presence`, userId);
-            await updateDoc(presenceRef, { status: 'offline', lastSeen: serverTimestamp() });
-        }
-
         await signOut(auth);
         console.log("Pengguna keluar.");
         // Hapus nama pengguna dari penyimpanan lokal jika terkait dengan sesi ini
@@ -295,7 +318,6 @@ async function handleLogout() {
 
         // Hentikan semua listener
         if (forumMessagesListener) forumMessagesListener();
-        if (onlineUsersListener) onlineUsersListener();
         if (allUsersListener) allUsersListener();
         if (activePrivateChatListener) activePrivateChatListener();
         if (privateChatsListener) privateChatsListener();
@@ -333,7 +355,6 @@ function showPage(pageToShow) {
         checkAndShowRewardedAdForForum();
     } else {
         if (forumMessagesListener) forumMessagesListener(); // Berhenti berlangganan
-        if (onlineUsersListener) onlineUsersListener(); // Berhenti berlangganan
     }
 
     if (pageToShow === privateChatPage) {
@@ -364,29 +385,175 @@ function showPage(pageToShow) {
 
 // --- Logika Obrolan Forum ---
 let forumMessagesListener;
-let onlineUsersListener;
+let lastVisibleForumMessage = null; // Untuk paginasi forum
+const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
 
-function startForumListeners() {
+async function loadForumMessagesFromCache() {
+    try {
+        const cachedMessages = [];
+        await forumMessagesDB.iterate((value, key, iterationNumber) => {
+            cachedMessages.push(value);
+        });
+        // Urutkan berdasarkan timestamp karena iterate tidak menjamin urutan
+        cachedMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+
+        if (cachedMessages.length > 0) {
+            forumMessages.innerHTML = ''; // Clear loading message
+            cachedMessages.forEach(msg => displayChatMessage(msg, forumMessages, false));
+            scrollToBottom(forumMessages);
+            console.log(`Memuat ${cachedMessages.length} pesan forum dari cache.`);
+        } else {
+            forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Tidak ada pesan forum di cache. Memuat dari server...</div>`;
+        }
+    } catch (err) {
+        console.error("Kesalahan saat memuat pesan forum dari cache:", err);
+        forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat dari cache.</div>`;
+    }
+}
+
+async function startForumListeners() {
     if (forumMessagesListener) forumMessagesListener(); // Berhenti berlangganan listener sebelumnya jika ada
 
-    forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Memuat pesan forum...</div>`;
+    // Muat dari cache terlebih dahulu
+    await loadForumMessagesFromCache();
+
+    // Ambil pesan terbaru dari Firestore (untuk pesan baru)
     const messagesRef = collection(db, `artifacts/${appId}/public/data/forum_messages`);
-    const q = query(messagesRef, orderBy('timestamp'));
+    const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(FORUM_MESSAGE_LIMIT)); // Ambil N pesan terakhir
 
     forumMessagesListener = onSnapshot(q, (snapshot) => {
-        forumMessages.innerHTML = ''; // Bersihkan pesan yang ada
-        if (snapshot.empty) {
+        const newMessages = [];
+        let latestTimestamp = null; // Untuk melacak timestamp pesan terbaru yang sudah ada di UI
+
+        // Dapatkan timestamp pesan terakhir yang saat ini ditampilkan di UI (jika ada)
+        const existingMessages = Array.from(forumMessages.children);
+        if (existingMessages.length > 0) {
+            const lastMsgElement = existingMessages[existingMessages.length - 1];
+            // Asumsi timestamp disimpan di dataset atau bisa diambil dari objek pesan yang di-cache
+            // Untuk kesederhanaan, kita akan menganggap snapshot Firestore adalah sumber kebenaran utama untuk pesan baru
+        }
+        
+        // Hapus pesan "Memuat..." jika ada pesan
+        if (forumMessages.children.length > 0 && forumMessages.children[0].textContent.includes('Memuat')) {
+            forumMessages.innerHTML = '';
+        } else if (forumMessages.children.length === 0 && snapshot.empty) {
             forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan. Jadilah yang pertama mengirim!</div>`;
         }
-        snapshot.forEach((doc) => {
-            displayChatMessage(doc.data(), forumMessages);
+
+        snapshot.docChanges().forEach((change) => {
+            const messageData = change.doc.data();
+            messageData.id = change.doc.id; // Tambahkan ID dokumen
+            if (change.type === "added") {
+                // Periksa apakah pesan sudah ada di UI (dari cache atau sebelumnya)
+                const existsInUI = Array.from(forumMessages.children).some(child => {
+                    const span = child.querySelector('span.forum-username');
+                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
+                           span.dataset.userId === messageData.userId;
+                });
+
+                if (!existsInUI) {
+                    newMessages.push(messageData);
+                }
+                forumMessagesDB.setItem(messageData.id, messageData); // Simpan/perbarui ke cache
+            } else if (change.type === "modified") {
+                // Perbarui di cache dan UI jika perlu
+                forumMessagesDB.setItem(messageData.id, messageData);
+                // Logika untuk memperbarui pesan di UI jika sudah ada
+                const existingMsgElement = Array.from(forumMessages.children).find(child => {
+                    const span = child.querySelector('span.forum-username');
+                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
+                           span.dataset.userId === messageData.userId;
+                });
+                if (existingMsgElement) {
+                    // Perbarui konten elemen yang ada
+                    existingMsgElement.querySelector('p').textContent = messageData.text;
+                    // Perbarui timestamp jika ditampilkan
+                }
+            } else if (change.type === "removed") {
+                // Hapus dari cache dan UI
+                forumMessagesDB.removeItem(messageData.id);
+                const removedElement = Array.from(forumMessages.children).find(child => {
+                    const span = child.querySelector('span.forum-username');
+                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
+                           span.dataset.userId === messageData.userId;
+                });
+                if (removedElement) {
+                    removedElement.remove();
+                }
+            }
         });
+
+        // Urutkan pesan baru berdasarkan timestamp dan tambahkan ke UI
+        newMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        newMessages.forEach(msg => displayChatMessage(msg, forumMessages, false));
+
+        // Perbarui lastVisibleForumMessage untuk paginasi
+        if (snapshot.docs.length > 0) {
+            lastVisibleForumMessage = snapshot.docs[snapshot.docs.length - 1];
+            loadMoreForumMessagesBtn.classList.remove('hidden');
+        } else {
+            lastVisibleForumMessage = null;
+            loadMoreForumMessagesBtn.classList.add('hidden');
+        }
+        
         scrollToBottom(forumMessages);
+        console.log("Pesan forum diperbarui dari Firestore.");
+
     }, (error) => {
         console.error("Kesalahan saat mendengarkan pesan forum:", error);
         forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat pesan forum.</div>`;
     });
 }
+
+async function loadOlderForumMessages() {
+    if (!lastVisibleForumMessage) {
+        showMessageBox("Tidak ada lagi pesan lama.", 'info', forumMessages.parentElement);
+        loadMoreForumMessagesBtn.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const messagesRef = collection(db, `artifacts/${appId}/public/data/forum_messages`);
+        const q = query(messagesRef, orderBy('timestamp', 'desc'), startAfter(lastVisibleForumMessage), limit(FORUM_MESSAGE_LIMIT));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            showMessageBox("Tidak ada lagi pesan lama.", 'info', forumMessages.parentElement);
+            loadMoreForumMessagesBtn.classList.add('hidden');
+            return;
+        }
+
+        const oldMessages = [];
+        snapshot.forEach(doc => {
+            const messageData = doc.data();
+            messageData.id = doc.id;
+            oldMessages.push(messageData);
+            forumMessagesDB.setItem(messageData.id, messageData); // Cache old messages
+        });
+
+        oldMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0)); // Urutkan dari yang tertua ke terbaru
+
+        // Tambahkan pesan ke bagian atas
+        const currentScrollHeight = forumMessages.scrollHeight;
+        const currentScrollTop = forumMessages.scrollTop;
+
+        oldMessages.forEach(msg => displayChatMessage(msg, forumMessages, false, true)); // Prepend
+
+        // Pertahankan posisi scroll
+        forumMessages.scrollTop = currentScrollTop + (forumMessages.scrollHeight - currentScrollHeight);
+
+        lastVisibleForumMessage = snapshot.docs[snapshot.docs.length - 1];
+        if (snapshot.docs.length < FORUM_MESSAGE_LIMIT) {
+            loadMoreForumMessagesBtn.classList.add('hidden');
+        }
+        console.log(`Memuat ${oldMessages.length} pesan forum lama.`);
+
+    } catch (error) {
+        console.error("Kesalahan saat memuat pesan forum lama:", error);
+        showMessageBox("Gagal memuat pesan lama.", 'error', forumMessages.parentElement);
+    }
+}
+
 
 async function sendForumMessage(e) {
     e.preventDefault();
@@ -394,12 +561,17 @@ async function sendForumMessage(e) {
 
     if (text && userId && username) {
         try {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/forum_messages`), {
+            const newMessage = {
                 userId: userId,
                 username: username,
                 text: text,
                 timestamp: serverTimestamp()
-            });
+            };
+            const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/forum_messages`), newMessage);
+            // Simpan juga ke IndexedDB
+            newMessage.id = docRef.id;
+            forumMessagesDB.setItem(newMessage.id, newMessage);
+
             // Perbarui jumlah pesan pengguna di profil
             const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
             await updateDoc(userDocRef, {
@@ -414,40 +586,6 @@ async function sendForumMessage(e) {
     } else if (!username) {
         showMessageBox("Silakan atur nama pengguna Anda di profil atau daftar terlebih dahulu.", 'warning', forumMessages.parentElement);
     }
-}
-
-// Kehadiran Online (Disederhanakan)
-async function setupOnlinePresence() {
-    if (!userId || !username) return;
-
-    const presenceRef = doc(db, `artifacts/${appId}/presence`, userId);
-    // Atur pengguna sebagai online
-    await setDoc(presenceRef, {
-        userId: userId,
-        username: username,
-        lastSeen: serverTimestamp(),
-        status: 'online'
-    }, { merge: true });
-
-    // Dengarkan semua pengguna online
-    const q = query(collection(db, `artifacts/${appId}/presence`), where('status', '==', 'online'));
-    onlineUsersListener = onSnapshot(q, (snapshot) => {
-        const onlineUsers = snapshot.docs.filter(doc => {
-            const data = doc.data();
-            // Anggap pengguna online jika terakhir terlihat dalam 5 menit terakhir
-            return data.lastSeen && (Date.now() - data.lastSeen.toDate().getTime() < 5 * 60 * 1000);
-        });
-        onlineCountDisplay.textContent = `(${onlineUsers.length} Online)`;
-    }, (error) => {
-        console.error("Kesalahan saat mendengarkan pengguna online:", error);
-    });
-
-    // Tandai pengguna offline saat mereka menutup aplikasi/tab (usaha terbaik)
-    window.addEventListener('beforeunload', async () => {
-        if (userId) {
-            await updateDoc(presenceRef, { status: 'offline', lastSeen: serverTimestamp() });
-        }
-    });
 }
 
 // --- Logika Obrolan Pribadi ---
@@ -541,7 +679,7 @@ async function startPrivateChat(recipientId, recipientName) {
 
             // Kirim permintaan obrolan
             const requestDocRef = doc(collection(db, `artifacts/${appId}/chat_requests`));
-            transaction.set(requestDocRef, {
+            const newRequest = {
                 senderId: userId,
                 senderUsername: username,
                 recipientId: recipientId,
@@ -550,7 +688,9 @@ async function startPrivateChat(recipientId, recipientName) {
                 createdAt: serverTimestamp(),
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 hari dari sekarang
                 chatId: chatId // Simpan chatId untuk referensi
-            });
+            };
+            transaction.set(requestDocRef, newRequest);
+            chatRequestsDB.setItem(requestDocRef.id, newRequest); // Cache request
         });
 
         // Tambahkan ke obrolan aktif dan pilih
@@ -614,6 +754,31 @@ function updateActiveChatsUI() {
     });
 }
 
+async function loadPrivateMessagesFromCache(chatId) {
+    try {
+        const cachedMessages = [];
+        await privateMessagesDB.iterate((value, key, iterationNumber) => {
+            if (value.chatId === chatId) { // Filter by current chat ID
+                cachedMessages.push(value);
+            }
+        });
+        cachedMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+
+        if (cachedMessages.length > 0) {
+            privateChatMessages.innerHTML = ''; // Clear loading message
+            cachedMessages.forEach(msg => displayChatMessage(msg, privateChatMessages, true));
+            scrollToBottom(privateChatMessages);
+            console.log(`Memuat ${cachedMessages.length} pesan pribadi dari cache untuk chat ${chatId}.`);
+        } else {
+            privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Tidak ada pesan pribadi di cache. Memuat dari server...</div>`;
+        }
+    } catch (err) {
+        console.error("Kesalahan saat memuat pesan pribadi dari cache:", err);
+        privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat dari cache.</div>`;
+    }
+}
+
+
 function selectPrivateChat(chatId, recipientId, recipientName) {
     if (activePrivateChatListener) {
         activePrivateChatListener(); // Berhenti berlangganan dari obrolan sebelumnya
@@ -622,6 +787,9 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
     privateChatRecipientName.textContent = recipientName;
     selectedPrivateChatView.classList.remove('hidden');
     privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Memuat pesan pribadi...</div>`;
+
+    // Muat dari cache terlebih dahulu
+    loadPrivateMessagesFromCache(chatId);
 
     // Perbarui gaya tombol obrolan aktif
     document.querySelectorAll('#activeChatsContainer button').forEach(btn => {
@@ -637,14 +805,29 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
     const q = query(messagesRef, orderBy('timestamp'));
 
     activePrivateChatListener = onSnapshot(q, (snapshot) => {
-        privateChatMessages.innerHTML = '';
-        if (snapshot.empty) {
-            privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan di obrolan pribadi ini.</div>`;
+        // Clear current messages if this is the first load from Firestore after cache
+        if (privateChatMessages.children.length > 0 && privateChatMessages.children[0].textContent.includes('Memuat dari server')) {
+            privateChatMessages.innerHTML = '';
+        } else if (privateChatMessages.children.length === 0 && snapshot.empty) {
+             privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan di obrolan pribadi ini.</div>`;
         }
-        snapshot.forEach((doc) => {
-            displayChatMessage(doc.data(), privateChatMessages, true); // Pass true for private messages
+
+        snapshot.docChanges().forEach((change) => {
+            const messageData = change.doc.data();
+            messageData.id = change.doc.id; // Add document ID
+            messageData.chatId = chatId; // Add chat ID for caching
+            if (change.type === "added") {
+                displayChatMessage(messageData, privateChatMessages, true);
+                privateMessagesDB.setItem(messageData.id, messageData); // Cache new messages
+            } else if (change.type === "modified") {
+                privateMessagesDB.setItem(messageData.id, messageData); // Update cache
+            } else if (change.type === "removed") {
+                privateMessagesDB.removeItem(messageData.id); // Remove from cache
+            }
         });
         scrollToBottom(privateChatMessages);
+        console.log("Pesan pribadi diperbarui dari Firestore.");
+
     }, (error) => {
         console.error("Kesalahan saat mendengarkan pesan pribadi:", error);
         privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat pesan pribadi.</div>`;
@@ -658,12 +841,17 @@ async function sendPrivateMessage(e) {
     if (text && userId && username && activePrivateChatId) {
         try {
             const messagesCollectionRef = collection(db, `artifacts/${appId}/private_chats/${activePrivateChatId}/messages`);
-            await addDoc(messagesCollectionRef, {
+            const newMessage = {
                 userId: userId,
                 username: username,
                 text: text,
                 timestamp: serverTimestamp()
-            });
+            };
+            const docRef = await addDoc(messagesCollectionRef, newMessage);
+            // Simpan juga ke IndexedDB
+            newMessage.id = docRef.id;
+            newMessage.chatId = activePrivateChatId;
+            privateMessagesDB.setItem(newMessage.id, newMessage);
 
             // Perbarui lastMessageAt untuk dokumen obrolan pribadi
             const chatDocRef = doc(db, `artifacts/${appId}/private_chats`, activePrivateChatId);
@@ -721,19 +909,21 @@ async function deletePrivateChat(chatId, recipientId) {
             privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Pilih obrolan atau mulai yang baru.</div>`;
         }
 
-        // Delete all messages within the subcollection first
+        // Hapus semua pesan di dalam subkoleksi terlebih dahulu
+        // Catatan: Untuk koleksi besar, ini harus dilakukan di Cloud Functions.
         const messagesRef = collection(db, `artifacts/${appId}/private_chats/${chatId}/messages`);
         const messageDocs = await getDocs(messagesRef);
         const deleteMessagePromises = [];
         messageDocs.forEach(msgDoc => {
             deleteMessagePromises.push(deleteDoc(doc(db, `artifacts/${appId}/private_chats/${chatId}/messages`, msgDoc.id)));
+            privateMessagesDB.removeItem(msgDoc.id); // Hapus dari cache
         });
         await Promise.all(deleteMessagePromises);
 
-        // Then delete the private chat document itself
+        // Kemudian hapus dokumen obrolan pribadi itu sendiri
         await deleteDoc(doc(db, `artifacts/${appId}/private_chats`, chatId));
 
-        // Remove from activePrivateChats object
+        // Hapus dari objek activePrivateChats
         // Find the recipientId associated with this chatId to remove it correctly
         let recipientIdToRemove = null;
         for (const rId in activePrivateChats) {
@@ -745,7 +935,7 @@ async function deletePrivateChat(chatId, recipientId) {
         if (recipientIdToRemove) {
             delete activePrivateChats[recipientIdToRemove];
         }
-        updateActiveChatsUI(); // Refresh UI
+        updateActiveChatsUI(); // Perbarui UI
 
         showMessageBox("Obrolan pribadi berhasil dihapus.", 'success', privateChatMessageBox, privateChatErrorMessage);
 
@@ -813,9 +1003,12 @@ async function listenForIncomingChatRequests() {
 
                 // Filter out expired requests client-side
                 if (expiresAtDate && expiresAtDate < now) {
-                    // Optionally delete expired requests here (requires write permission for sender/recipient)
+                    // CATATAN: Untuk menghapus permintaan kedaluwarsa dari database,
+                    // Anda memerlukan Firebase Cloud Function yang berjalan di sisi server.
+                    // Klien tidak boleh memiliki izin penghapusan massal.
                     // deleteDoc(doc(db, `artifacts/${appId}/chat_requests`, requestId)).catch(e => console.error("Error deleting expired request:", e));
-                    return; // Skip displaying expired request
+                    chatRequestsDB.removeItem(requestId); // Hapus dari cache lokal
+                    return; // Lewati menampilkan permintaan yang kedaluwarsa
                 }
 
                 pendingRequestsCount++;
@@ -829,6 +1022,7 @@ async function listenForIncomingChatRequests() {
                     </div>
                 `;
                 incomingRequestsList.appendChild(listItem);
+                chatRequestsDB.setItem(requestId, request); // Cache request
             });
 
             if (pendingRequestsCount > 0) {
@@ -874,6 +1068,7 @@ async function handleChatRequest(requestId, action, senderId = null, senderUsern
 
                 // Update request status
                 transaction.update(requestDocRef, { status: 'accepted', acceptedAt: serverTimestamp() });
+                chatRequestsDB.removeItem(requestId); // Remove from cache
 
                 // Ensure private chat document exists (it should have been created by sender)
                 const privateChatDocRef = doc(db, `artifacts/${appId}/private_chats`, chatId);
@@ -898,6 +1093,7 @@ async function handleChatRequest(requestId, action, senderId = null, senderUsern
 
         } else if (action === 'deny') {
             await deleteDoc(requestDocRef);
+            chatRequestsDB.removeItem(requestId); // Remove from cache
             showMessageBox("Permintaan obrolan ditolak.", 'success', privateChatMessageBox, privateChatErrorMessage);
         }
     } catch (error) {
@@ -1188,6 +1384,7 @@ async function checkAndShowRewardedAdForForum() {
         // Keep forum hidden until ad is ready or user waits
         forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Anda perlu menonton iklan berhadiah untuk mengakses forum.</div>`;
         forumMessageForm.classList.add('hidden');
+        loadMoreForumMessagesBtn.classList.add('hidden'); // Hide load more button
         return;
     }
 
@@ -1213,6 +1410,7 @@ async function checkAndShowRewardedAdForForum() {
             startForumAdCountdown(FORUM_AD_COOLDOWN); // Start full cooldown
             forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Iklan gagal dimuat. Silakan coba lagi setelah timer.</div>`;
             forumMessageForm.classList.add('hidden');
+            loadMoreForumMessagesBtn.classList.add('hidden'); // Hide load more button
         }
     }, 3000); // Simulate ad display time
 }
@@ -1259,6 +1457,7 @@ navDonate.addEventListener('click', () => showPage(donatePage));
 
 // Forum
 forumMessageForm.addEventListener('submit', sendForumMessage);
+loadMoreForumMessagesBtn.addEventListener('click', loadOlderForumMessages);
 
 // Obrolan Pribadi
 privateMessageForm.addEventListener('submit', sendPrivateMessage);
