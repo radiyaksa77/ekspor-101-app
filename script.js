@@ -30,7 +30,7 @@ let userRandomId = null; // ID acak pengguna
 const authPage = document.getElementById('authPage');
 const mainApp = document.getElementById('mainApp');
 const emailInput = document.getElementById('emailInput');
-const passwordInput = document.getElementById('passwordInput');
+const passwordInput = document = document.getElementById('passwordInput'); // Corrected typo here
 const authSubmitBtn = document.getElementById('authSubmitBtn');
 const toggleAuthBtn = document.getElementById('toggleAuthBtn');
 const authTitle = document.getElementById('authTitle');
