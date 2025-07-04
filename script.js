@@ -25,6 +25,7 @@ let auth;
 let userId = null; // Akan diatur setelah autentikasi
 let username = null; // Akan diatur dari profil pengguna di Firestore
 let userRandomId = null; // ID acak pengguna
+let userRole = 'user'; // Default role, could be 'user', 'official', 'admin'
 
 // DOM Elements
 const authPage = document.getElementById('authPage');
@@ -36,9 +37,9 @@ const toggleAuthBtn = document.getElementById('toggleAuthBtn');
 const authTitle = document.getElementById('authTitle');
 const authError = document.getElementById('authError');
 const authErrorMessage = document.getElementById('authErrorMessage');
-const logoutBtn = document.getElementById('logoutBtn');
-const userIdDisplay = document.getElementById('userIdDisplay');
-const currentUserIdDisplay = document.getElementById('currentUserId');
+// const logoutBtn = document.getElementById('logoutBtn'); // Moved to profile area
+const userIdDisplay = document.getElementById('userIdDisplay'); // This will now be primarily for showing the user's ID within the profile page
+const currentUserIdDisplay = document.getElementById('currentUserId'); // This element will be removed from header display logic
 
 // Tombol Navigasi
 const navForum = document.getElementById('navForum');
@@ -105,9 +106,13 @@ const foundUsernameDisplay = document.getElementById('foundUsername');
 const foundUserIdDisplay = document.getElementById('foundUserId');
 const sendPmRequestBtn = document.getElementById('sendPmRequestBtn');
 const sendPmRequestMessage = document.getElementById('sendPmRequestMessage');
+const profileLogoutBtn = document.getElementById('profileLogoutBtn'); // New: Logout button in profile
 
 // Elemen Donasi
 const contactSupportBtn = document.getElementById('contactSupportBtn');
+
+// Elemen Ekspor 101 (Bulletin Board)
+const bulletinBoard = document.getElementById('bulletinBoard');
 
 // Ad Placeholders
 const bannerAd = document.getElementById('bannerAd');
@@ -152,63 +157,6 @@ function scrollToBottom(element) {
     }
 }
 
-// Fungsi untuk menampilkan pesan di UI obrolan
-function displayChatMessage(message, targetElement, isPrivate = false, prepend = false) { // Added prepend parameter
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('flex', 'items-start', 'space-x-2');
-
-    const isCurrentUser = message.userId === userId;
-
-    let bubbleClasses = 'p-3 rounded-lg max-w-[75%] shadow-sm';
-    let textClasses = 'text-gray-800';
-    let nameClasses = 'font-semibold text-sm';
-
-    if (isCurrentUser) {
-        messageElement.classList.add('self-end', 'justify-end');
-        bubbleClasses += ' bg-blue-500 text-white';
-        textClasses = 'text-white';
-        nameClasses = 'font-semibold text-sm text-blue-200';
-    } else {
-        messageElement.classList.add('self-start', 'justify-start');
-        bubbleClasses += ' bg-gray-200';
-        textClasses = 'text-gray-800';
-        nameClasses = 'font-semibold text-sm text-gray-600';
-    }
-
-    const displayDate = getDisplayDate(message.timestamp);
-    const formattedTime = displayDate ? displayDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...';
-
-    messageElement.innerHTML = `
-        <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
-            <span class="${nameClasses} ${isPrivate ? '' : 'cursor-pointer forum-username'}" data-user-id="${message.userId}" data-username="${message.username}">${message.username || 'Anonim'}</span>
-            <div class="${bubbleClasses}">
-                <p class="${textClasses}">${message.text}</p>
-                <span class="text-xs ${isCurrentUser ? 'text-blue-300' : 'text-gray-500'} mt-1 block">
-                    ${formattedTime}
-                </span>
-            </div>
-        </div>
-    `;
-    if (prepend) {
-        targetElement.prepend(messageElement);
-    } else {
-        targetElement.appendChild(messageElement);
-    }
-
-
-    // Add event listener for clicking username in forum
-    if (!isPrivate) { // Only for forum messages
-        messageElement.querySelector('.forum-username').addEventListener('click', (e) => {
-            const clickedUserId = e.target.dataset.userId;
-            const clickedUsername = e.target.dataset.username;
-            if (clickedUserId !== userId) { // Prevent clicking on self
-                showPage(profilePage);
-                displayOtherUserProfile(clickedUserId, clickedUsername);
-            }
-        });
-    }
-}
-
 // Fungsi untuk menampilkan kotak pesan kustom (menggantikan alert)
 function showMessageBox(message, type = 'error', targetElement = authError, targetMessageElement = authErrorMessage, duration = 5000) {
     targetMessageElement.textContent = message;
@@ -238,6 +186,105 @@ function generateRandomUserId() {
     return result;
 }
 
+// Fungsi untuk menampilkan pesan di UI obrolan
+function displayChatMessage(message, targetElement, isPrivate = false, prepend = false) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('flex', 'items-start', 'space-x-2', 'mb-2'); // Added mb-2 for spacing
+
+    const isCurrentUser = message.userId === userId;
+
+    let bubbleClasses = 'p-3 rounded-lg max-w-[75%] shadow-sm';
+    let textClasses = 'text-gray-800';
+    let nameClasses = 'font-semibold text-sm';
+
+    if (isCurrentUser) {
+        messageElement.classList.add('self-end', 'justify-end');
+        bubbleClasses += ' bg-blue-500 text-white';
+        textClasses = 'text-white';
+        nameClasses = 'font-semibold text-sm text-blue-200';
+    } else {
+        messageElement.classList.add('self-start', 'justify-start');
+        bubbleClasses += ' bg-gray-200';
+        textClasses = 'text-gray-800';
+        nameClasses = 'font-semibold text-sm text-gray-600';
+    }
+
+    const displayDate = getDisplayDate(message.timestamp);
+    const formattedTime = displayDate ? displayDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...';
+
+    // Add badge for official/admin users
+    let usernameDisplay = message.username || 'Anonim';
+    if (message.userRole === 'official') {
+        usernameDisplay += ' <span class="text-xs bg-green-500 text-white px-1 rounded-full ml-1">Official</span>';
+    } else if (message.userRole === 'admin') {
+        usernameDisplay += ' <span class="text-xs bg-red-500 text-white px-1 rounded-full ml-1">Admin</span>';
+    }
+
+    let deleteButtonHtml = '';
+    if (isCurrentUser) {
+        deleteButtonHtml = `
+            <button class="delete-message-btn text-red-400 hover:text-red-600 ml-2"
+                    data-message-id="${message.id}"
+                    data-chat-id="${isPrivate ? message.chatId : ''}"
+                    data-is-private="${isPrivate}">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+    }
+
+    messageElement.innerHTML = `
+        <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
+            <div class="flex items-center ${isCurrentUser ? 'flex-row-reverse' : ''}">
+                <span class="${nameClasses} ${isPrivate ? '' : 'cursor-pointer forum-username'}" data-user-id="${message.userId}" data-username="${message.username}">${usernameDisplay}</span>
+                ${deleteButtonHtml}
+            </div>
+            <div class="${bubbleClasses}">
+                <p class="${textClasses}">${message.text}</p>
+                <span class="text-xs ${isCurrentUser ? 'text-blue-300' : 'text-gray-500'} mt-1 block">
+                    ${formattedTime}
+                </span>
+            </div>
+        </div>
+    `;
+    if (prepend) {
+        targetElement.prepend(messageElement);
+    } else {
+        targetElement.appendChild(messageElement);
+    }
+
+    // Add event listener for clicking username in forum
+    if (!isPrivate) { // Only for forum messages
+        const forumUsernameSpan = messageElement.querySelector('.forum-username');
+        if (forumUsernameSpan) {
+            forumUsernameSpan.addEventListener('click', (e) => {
+                const clickedUserId = e.target.dataset.userId;
+                const clickedUsername = e.target.dataset.username;
+                if (clickedUserId !== userId) { // Prevent clicking on self
+                    showPage(profilePage);
+                    displayOtherUserProfile(clickedUserId, clickedUsername);
+                }
+            });
+        }
+    }
+
+    // Add event listener for delete button
+    const deleteBtn = messageElement.querySelector('.delete-message-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+            const msgId = e.currentTarget.dataset.messageId;
+            const isPriv = e.currentTarget.dataset.isPrivate === 'true';
+            const chatId = e.currentTarget.dataset.chatId;
+
+            if (isPriv) {
+                await deletePrivateMessage(chatId, msgId);
+            } else {
+                await deleteForumMessage(msgId);
+            }
+        });
+    }
+}
+
+
 // --- Logika Autentikasi ---
 
 async function handleAuth() {
@@ -260,10 +307,12 @@ async function handleAuth() {
                 username: email.split('@')[0], // Nama pengguna default dari email
                 randomUserId: randomId,
                 createdAt: serverTimestamp(),
-                messageCount: 0 // Inisialisasi jumlah pesan
+                messageCount: 0, // Inisialisasi jumlah pesan
+                role: 'user' // Default role for new users
             });
             username = email.split('@')[0]; // Atur nama pengguna global
             userRandomId = randomId;
+            userRole = 'user';
             showMessageBox('Pendaftaran berhasil! Anda sekarang masuk.', 'success');
         } else { // currentAuthMode === 'login'
             await signInWithEmailAndPassword(auth, email, password);
@@ -319,7 +368,7 @@ async function handleLogout() {
         localStorage.removeItem('chatUsername');
         // Sembunyikan aplikasi utama, tampilkan halaman autentikasi
         mainApp.classList.add('hidden');
-        userIdDisplay.classList.add('hidden');
+        userIdDisplay.classList.add('hidden'); // Ensure this is hidden when logged out
         authPage.classList.remove('hidden');
         // Bersihkan input
         emailInput.value = '';
@@ -336,7 +385,8 @@ async function handleLogout() {
         if (activePrivateChatListener) activePrivateChatListener();
         if (privateChatsListener) privateChatsListener();
         if (incomingChatRequestsListener) incomingChatRequestsListener();
-
+        if (userProfileListener) userProfileListener();
+        if (bulletinListener) bulletinListener(); // Stop bulletin listener
     } catch (error) {
         console.error("Kesalahan saat keluar:", error);
         showMessageBox("Kesalahan saat keluar.", 'error');
@@ -394,6 +444,12 @@ function showPage(pageToShow) {
         findUserMessage.classList.add('hidden');
     } else {
         if (userProfileListener) userProfileListener(); // Berhenti berlangganan
+    }
+
+    if (pageToShow === ekspor101Page) {
+        listenForBulletinUpdates();
+    } else {
+        if (bulletinListener) bulletinListener(); // Stop bulletin listener when leaving page
     }
 }
 
@@ -483,9 +539,9 @@ async function startForumListeners() {
                 // Hapus dari cache dan UI
                 forumMessagesDB.removeItem(messageData.id);
                 const removedElement = Array.from(forumMessages.children).find(child => {
-                    const pElement = child.querySelector('p');
-                    return pElement && pElement.textContent === messageData.text &&
-                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
+                    // Find by message ID if available, otherwise by content/user
+                    const deleteButton = child.querySelector('.delete-message-btn');
+                    return deleteButton && deleteButton.dataset.messageId === messageData.id;
                 });
                 if (removedElement) {
                     removedElement.remove();
@@ -583,7 +639,8 @@ async function sendForumMessage(e) {
                 userId: userId,
                 username: username,
                 text: text,
-                timestamp: serverTimestamp()
+                timestamp: serverTimestamp(),
+                userRole: userRole // Include user role in message
             };
             const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/forum_messages`), newMessage);
             // Simpan juga ke IndexedDB
@@ -606,6 +663,61 @@ async function sendForumMessage(e) {
     }
 }
 
+async function deleteForumMessage(messageId) {
+    const confirmDelete = await new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.classList.add('fixed', 'inset-0', 'bg-gray-900', 'bg-opacity-75', 'flex', 'items-center', 'justify-center', 'p-4', 'z-50');
+        modal.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Hapus Pesan Forum?</h3>
+                <p class="text-gray-600 mb-6">Anda yakin ingin menghapus pesan ini dari forum? Ini tidak dapat dibatalkan.</p>
+                <div class="flex justify-around">
+                    <button id="confirmDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">Ya, Hapus</button>
+                    <button id="cancelDeleteBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-300">Batal</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('confirmDeleteBtn').onclick = () => {
+            modal.remove();
+            resolve(true);
+        };
+        document.getElementById('cancelDeleteBtn').onclick = () => {
+            modal.remove();
+            resolve(false);
+        };
+    });
+
+    if (!confirmDelete) {
+        return;
+    }
+
+    try {
+        const messageDocRef = doc(db, `artifacts/${appId}/public/data/forum_messages`, messageId);
+        const messageDoc = await getDoc(messageDocRef);
+
+        if (messageDoc.exists() && messageDoc.data().userId === userId) {
+            await deleteDoc(messageDocRef);
+            forumMessagesDB.removeItem(messageId); // Remove from cache
+
+            // Decrease user's message count
+            const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
+            await updateDoc(userDocRef, {
+                messageCount: (await getDoc(userDocRef)).data().messageCount - 1
+            });
+
+            showMessageBox('Pesan forum berhasil dihapus.', 'success', forumMessages.parentElement);
+        } else {
+            showMessageBox('Anda tidak memiliki izin untuk menghapus pesan ini.', 'error', forumMessages.parentElement);
+        }
+    } catch (error) {
+        console.error("Kesalahan saat menghapus pesan forum:", error);
+        showMessageBox("Gagal menghapus pesan forum.", 'error', forumMessages.parentElement);
+    }
+}
+
+
 // --- Logika Obrolan Pribadi ---
 
 async function loadAllMembers() {
@@ -627,12 +739,20 @@ async function loadAllMembers() {
 
             const listItem = document.createElement('li');
             listItem.classList.add('p-2', 'bg-gray-50', 'rounded-lg', 'cursor-pointer', 'hover:bg-blue-100', 'transition', 'duration-200');
-            listItem.textContent = memberData.username;
+            
+            let memberNameDisplay = memberData.username;
+            if (memberData.role === 'official') {
+                memberNameDisplay += ' <span class="text-xs bg-green-500 text-white px-1 rounded-full ml-1">Official</span>';
+            } else if (memberData.role === 'admin') {
+                memberNameDisplay += ' <span class="text-xs bg-red-500 text-white px-1 rounded-full ml-1">Admin</span>';
+            }
+            listItem.innerHTML = memberNameDisplay;
+
             listItem.dataset.userId = userDoc.id;
             listItem.dataset.username = memberData.username;
             listItem.addEventListener('click', () => {
-                showPage(profilePage); // Navigate to profile page
-                displayOtherUserProfile(userDoc.id, memberData.username); // Display other user's profile
+                showPage(privateChatPage); // Stay on private chat page
+                startPrivateChat(userDoc.id, memberData.username); // Directly start chat
             });
             memberList.appendChild(listItem);
         });
@@ -845,6 +965,14 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
                 privateMessagesDB.setItem(messageData.id, messageData); // Update cache
             } else if (change.type === "removed") {
                 privateMessagesDB.removeItem(messageData.id); // Remove from cache
+                // Remove message from UI
+                const removedElement = Array.from(privateChatMessages.children).find(child => {
+                    const deleteButton = child.querySelector('.delete-message-btn');
+                    return deleteButton && deleteButton.dataset.messageId === messageData.id;
+                });
+                if (removedElement) {
+                    removedElement.remove();
+                }
             }
         });
         scrollToBottom(privateChatMessages);
@@ -867,7 +995,8 @@ async function sendPrivateMessage(e) {
                 userId: userId,
                 username: username,
                 text: text,
-                timestamp: serverTimestamp()
+                timestamp: serverTimestamp(),
+                userRole: userRole // Include user role in message
             };
             const docRef = await addDoc(messagesCollectionRef, newMessage);
             // Simpan juga ke IndexedDB
@@ -964,6 +1093,53 @@ async function deletePrivateChat(chatId, recipientId) {
     } catch (error) {
         console.error("Kesalahan saat menghapus obrolan pribadi:", error);
         showMessageBox("Gagal menghapus obrolan pribadi.", 'error', privateChatMessageBox, privateChatErrorMessage);
+    }
+}
+
+async function deletePrivateMessage(chatId, messageId) {
+    const confirmDelete = await new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.classList.add('fixed', 'inset-0', 'bg-gray-900', 'bg-opacity-75', 'flex', 'items-center', 'justify-center', 'p-4', 'z-50');
+        modal.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Hapus Pesan Pribadi?</h3>
+                <p class="text-gray-600 mb-6">Anda yakin ingin menghapus pesan ini dari obrolan pribadi? Ini tidak dapat dibatalkan.</p>
+                <div class="flex justify-around">
+                    <button id="confirmDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">Ya, Hapus</button>
+                    <button id="cancelDeleteBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-300">Batal</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('confirmDeleteBtn').onclick = () => {
+            modal.remove();
+            resolve(true);
+        };
+        document.getElementById('cancelDeleteBtn').onclick = () => {
+            modal.remove();
+            resolve(false);
+        };
+    });
+
+    if (!confirmDelete) {
+        return;
+    }
+
+    try {
+        const messageDocRef = doc(db, `artifacts/${appId}/private_chats/${chatId}/messages`, messageId);
+        const messageDoc = await getDoc(messageDocRef);
+
+        if (messageDoc.exists() && messageDoc.data().userId === userId) {
+            await deleteDoc(messageDocRef);
+            privateMessagesDB.removeItem(messageId); // Remove from cache
+            showMessageBox('Pesan pribadi berhasil dihapus.', 'success', privateChatMessageBox, privateChatErrorMessage);
+        } else {
+            showMessageBox('Anda tidak memiliki izin untuk menghapus pesan ini.', 'error', privateChatMessageBox, privateChatErrorMessage);
+        }
+    } catch (error) {
+        console.error("Kesalahan saat menghapus pesan pribadi:", error);
+        showMessageBox("Gagal menghapus pesan pribadi.", 'error', privateChatMessageBox, privateChatErrorMessage);
     }
 }
 
@@ -1143,6 +1319,7 @@ async function loadUserProfile() {
             const userData = docSnapshot.data();
             username = userData.username; // Perbarui nama pengguna global
             userRandomId = userData.randomUserId; // Perbarui ID acak global
+            userRole = userData.role || 'user'; // Perbarui peran pengguna global
 
             profileUsernameDisplay.textContent = userData.username || 'Belum Diatur';
             profileUserIdDisplay.textContent = userData.randomUserId || 'Belum Diatur';
@@ -1162,11 +1339,13 @@ async function loadUserProfile() {
                     username: auth.currentUser.email.split('@')[0],
                     randomUserId: randomId,
                     createdAt: serverTimestamp(),
-                    messageCount: 0
+                    messageCount: 0,
+                    role: 'user' // Default role
                 }).then(() => {
                     console.log("Profil pengguna dibuat secara otomatis.");
                     username = auth.currentUser.email.split('@')[0];
                     userRandomId = randomId;
+                    userRole = 'user';
                     profileUsernameDisplay.textContent = username;
                     profileUserIdDisplay.textContent = userRandomId;
                 }).catch(e => console.error("Error creating user profile:", e));
@@ -1362,7 +1541,9 @@ function showBannerAd() {
     // Untuk aplikasi Android yang dibungkus, ini akan menggunakan plugin Capacitor/Cordova AdMob.
     console.log("Menampilkan iklan banner.");
     // bannerAd.innerHTML = '<img src="https://placehold.co/320x50/FFD700/000000?text=Iklan+Aktual" alt="Iklan Banner">';
-    // Atau kode AdSense/AdMob:
+    // NOTE: For the banner ad to be static and unscrollable, you would typically apply
+    // CSS styling to its container (e.g., `position: fixed; bottom: 0; width: 100%; z-index: 1000;`).
+    // This is a CSS/HTML layout concern, not directly handled in JavaScript logic.
     /*
     if (window.adsbygoogle && window.adsbygoogle.length > 0) {
         (adsbygoogle = window.adsbygoogle || []).push({});
@@ -1462,13 +1643,49 @@ function startForumAdCountdown(remainingTimeMs) {
     }, 1000);
 }
 
+// --- Logika Papan Buletin ---
+let bulletinListener;
+
+async function listenForBulletinUpdates() {
+    if (bulletinListener) bulletinListener(); // Stop previous listener if any
+
+    bulletinBoard.innerHTML = `<p class="text-center text-gray-500 italic">Memuat pengumuman...</p>`;
+    const bulletinRef = collection(db, `artifacts/${appId}/public/data/bulletin`);
+    const q = query(bulletinRef, orderBy('timestamp', 'desc')); // Order by latest
+
+    bulletinListener = onSnapshot(q, (snapshot) => {
+        bulletinBoard.innerHTML = ''; // Clear existing content
+        if (snapshot.empty) {
+            bulletinBoard.innerHTML = `<p class="text-center text-gray-500 italic">Belum ada pengumuman.</p>`;
+            return;
+        }
+        snapshot.forEach(docSnap => {
+            const bulletinData = docSnap.data();
+            const displayDate = getDisplayDate(bulletinData.timestamp);
+            const formattedDate = displayDate ? displayDate.toLocaleDateString() : 'Tanggal tidak diketahui';
+
+            const bulletinItem = document.createElement('div');
+            bulletinItem.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow-md', 'mb-4');
+            bulletinItem.innerHTML = `
+                <h3 class="font-bold text-lg text-gray-800">${bulletinData.title || 'Tanpa Judul'}</h3>
+                <p class="text-gray-700 mt-2">${bulletinData.content || 'Tidak ada konten.'}</p>
+                <p class="text-sm text-gray-500 mt-2">Diterbitkan: ${formattedDate}</p>
+            `;
+            bulletinBoard.appendChild(bulletinItem);
+        });
+    }, (error) => {
+        console.error("Kesalahan saat mendengarkan papan buletin:", error);
+        bulletinBoard.innerHTML = `<p class="text-center text-red-500 italic">Kesalahan saat memuat pengumuman.</p>`;
+    });
+}
+
 
 // --- Event Listeners ---
 
 // Halaman Autentikasi
 authSubmitBtn.addEventListener('click', handleAuth);
 toggleAuthBtn.addEventListener('click', toggleAuthMode);
-logoutBtn.addEventListener('click', handleLogout);
+// logoutBtn.addEventListener('click', handleLogout); // Moved to profile area
 
 // Navigasi
 navForum.addEventListener('click', () => showPage(forumPage));
@@ -1501,6 +1718,7 @@ sendPmRequestBtn.addEventListener('click', async () => {
         showMessageBox('Penerima tidak valid.', 'error', sendPmRequestMessage, sendPmRequestMessage);
     }
 });
+profileLogoutBtn.addEventListener('click', handleLogout); // New: Event listener for logout button in profile
 
 // Donasi
 contactSupportBtn.addEventListener('click', () => {
@@ -1520,9 +1738,9 @@ async function initializeFirebase() {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
-                currentUserIdDisplay.textContent = `ID Anda: ${userId}`; // Display actual Firebase UID
+                // currentUserIdDisplay.textContent = `ID Anda: ${userId}`; // Removed from header display
 
-                // Fetch user profile from Firestore to get username and randomUserId
+                // Fetch user profile from Firestore to get username, randomUserId, and role
                 const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
                 const userDoc = await getDoc(userDocRef);
 
@@ -1530,6 +1748,7 @@ async function initializeFirebase() {
                     const userData = userDoc.data();
                     username = userData.username;
                     userRandomId = userData.randomUserId;
+                    userRole = userData.role || 'user'; // Set user role
                     // If username is null/undefined in Firestore, use email part as fallback
                     if (!username) {
                         username = user.email ? user.email.split('@')[0] : 'Anonim';
@@ -1544,12 +1763,14 @@ async function initializeFirebase() {
                     // User exists in Auth but not in Firestore (e.g., first login after old data wipe)
                     username = user.email ? user.email.split('@')[0] : 'Anonim';
                     userRandomId = generateRandomUserId();
+                    userRole = 'user'; // Default role
                     await setDoc(userDocRef, {
                         email: user.email,
                         username: username,
                         randomUserId: userRandomId,
                         createdAt: serverTimestamp(),
-                        messageCount: 0
+                        messageCount: 0,
+                        role: userRole
                     });
                     console.log("Profil pengguna Firestore dibuat untuk pengguna yang sudah ada di Auth.");
                 }
@@ -1557,10 +1778,10 @@ async function initializeFirebase() {
                 // Show main app and hide auth page
                 authPage.classList.add('hidden');
                 mainApp.classList.remove('hidden');
-                userIdDisplay.classList.remove('hidden');
+                userIdDisplay.classList.add('hidden'); // Keep this hidden as per request for top header
 
-                // Set initial page to Forum and start its listeners
-                showPage(forumPage);
+                // Set initial page to Profile
+                showPage(profilePage);
                 showBannerAd(); // Show banner ad on app load
 
             } else {
@@ -1568,6 +1789,7 @@ async function initializeFirebase() {
                 userId = null;
                 username = null;
                 userRandomId = null;
+                userRole = 'user'; // Reset role
                 authPage.classList.remove('hidden');
                 mainApp.classList.add('hidden');
                 userIdDisplay.classList.add('hidden');
@@ -1580,6 +1802,7 @@ async function initializeFirebase() {
                 if (privateChatsListener) privateChatsListener();
                 if (incomingChatRequestsListener) incomingChatRequestsListener();
                 if (userProfileListener) userProfileListener();
+                if (bulletinListener) bulletinListener(); // Stop bulletin listener
             }
         });
     } catch (error) {
