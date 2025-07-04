@@ -80,12 +80,16 @@
 
             <!-- Halaman Forum -->
             <div id="forumPage" class="page-content flex flex-col h-full">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Forum Universal <span id="onlineCount" class="text-blue-500 text-xl">(0 Online)</span></h2>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Forum Universal</h2>
                 <div id="forumMessages" class="flex-1 overflow-y-auto bg-white p-4 rounded-xl shadow-lg mb-4 flex flex-col space-y-3 chat-messages">
                     <div class="text-center text-gray-500 text-sm italic">
                         Memuat pesan forum...
                     </div>
                 </div>
+                <!-- Pagination / Load More Button for Forum -->
+                <button id="loadMoreForumMessagesBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 mb-4 hidden">
+                    Muat Lebih Banyak Pesan
+                </button>
                 <form id="forumMessageForm" class="flex items-center bg-white p-3 rounded-xl shadow-lg">
                     <input type="text" id="forumMessageInput" placeholder="Ketik pesan Anda..."
                            class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
