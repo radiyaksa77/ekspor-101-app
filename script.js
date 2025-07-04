@@ -63,7 +63,7 @@ const forumMessageForm = document.getElementById('forumMessageForm');
 const loadMoreForumMessagesBtn = document.getElementById('loadMoreForumMessagesBtn');
 const forumAdTimerDisplay = document.getElementById('forumAdTimer');
 
-let lastVisibleForumMessage = null; // Untuk paginasi forum
+let lastVisibleForumMessage = null; // Untuk paginasi forum, dideklarasikan sekali di sini
 const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
 
 // Elemen Obrolan Pribadi
@@ -134,6 +134,16 @@ const chatRequestsDB = localforage.createInstance({
 
 // --- Fungsi Utilitas ---
 
+// Helper untuk mendapatkan objek Date dari Firestore Timestamp atau objek Date
+function getDisplayDate(timestamp) {
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate(); // Firestore Timestamp
+    } else if (timestamp instanceof Date) {
+        return timestamp; // Native Date object
+    }
+    return null;
+}
+
 // Fungsi untuk menggulir obrolan ke bawah
 function scrollToBottom(element) {
     if (element) {
@@ -164,13 +174,16 @@ function displayChatMessage(message, targetElement, isPrivate = false, prepend =
         nameClasses = 'font-semibold text-sm text-gray-600';
     }
 
+    const displayDate = getDisplayDate(message.timestamp);
+    const formattedTime = displayDate ? displayDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...';
+
     messageElement.innerHTML = `
         <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
             <span class="${nameClasses} ${isPrivate ? '' : 'cursor-pointer forum-username'}" data-user-id="${message.userId}" data-username="${message.username}">${message.username || 'Anonim'}</span>
             <div class="${bubbleClasses}">
                 <p class="${textClasses}">${message.text}</p>
                 <span class="text-xs ${isCurrentUser ? 'text-blue-300' : 'text-gray-500'} mt-1 block">
-                    ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...'}
+                    ${formattedTime}
                 </span>
             </div>
         </div>
@@ -384,9 +397,7 @@ function showPage(pageToShow) {
 }
 
 // --- Logika Obrolan Forum ---
-let forumMessagesListener;
-let lastVisibleForumMessage = null; // Untuk paginasi forum
-const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
+let forumMessagesListener; // Dideklarasikan sekali di sini
 
 async function loadForumMessagesFromCache() {
     try {
@@ -395,7 +406,11 @@ async function loadForumMessagesFromCache() {
             cachedMessages.push(value);
         });
         // Urutkan berdasarkan timestamp karena iterate tidak menjamin urutan
-        cachedMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        cachedMessages.sort((a, b) => {
+            const timeA = getDisplayDate(a.timestamp)?.getTime() || 0;
+            const timeB = getDisplayDate(b.timestamp)?.getTime() || 0;
+            return timeA - timeB;
+        });
 
         if (cachedMessages.length > 0) {
             forumMessages.innerHTML = ''; // Clear loading message
@@ -423,15 +438,6 @@ async function startForumListeners() {
 
     forumMessagesListener = onSnapshot(q, (snapshot) => {
         const newMessages = [];
-        let latestTimestamp = null; // Untuk melacak timestamp pesan terbaru yang sudah ada di UI
-
-        // Dapatkan timestamp pesan terakhir yang saat ini ditampilkan di UI (jika ada)
-        const existingMessages = Array.from(forumMessages.children);
-        if (existingMessages.length > 0) {
-            const lastMsgElement = existingMessages[existingMessages.length - 1];
-            // Asumsi timestamp disimpan di dataset atau bisa diambil dari objek pesan yang di-cache
-            // Untuk kesederhanaan, kita akan menganggap snapshot Firestore adalah sumber kebenaran utama untuk pesan baru
-        }
         
         // Hapus pesan "Memuat..." jika ada pesan
         if (forumMessages.children.length > 0 && forumMessages.children[0].textContent.includes('Memuat')) {
@@ -445,10 +451,11 @@ async function startForumListeners() {
             messageData.id = change.doc.id; // Tambahkan ID dokumen
             if (change.type === "added") {
                 // Periksa apakah pesan sudah ada di UI (dari cache atau sebelumnya)
+                // Ini adalah pemeriksaan sederhana, mungkin perlu lebih canggih untuk menghindari duplikasi sempurna
                 const existsInUI = Array.from(forumMessages.children).some(child => {
-                    const span = child.querySelector('span.forum-username');
-                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
-                           span.dataset.userId === messageData.userId;
+                    const pElement = child.querySelector('p');
+                    return pElement && pElement.textContent === messageData.text &&
+                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
                 });
 
                 if (!existsInUI) {
@@ -458,24 +465,26 @@ async function startForumListeners() {
             } else if (change.type === "modified") {
                 // Perbarui di cache dan UI jika perlu
                 forumMessagesDB.setItem(messageData.id, messageData);
-                // Logika untuk memperbarui pesan di UI jika sudah ada
                 const existingMsgElement = Array.from(forumMessages.children).find(child => {
-                    const span = child.querySelector('span.forum-username');
-                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
-                           span.dataset.userId === messageData.userId;
+                    const pElement = child.querySelector('p');
+                    return pElement && pElement.textContent === messageData.text &&
+                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
                 });
                 if (existingMsgElement) {
                     // Perbarui konten elemen yang ada
                     existingMsgElement.querySelector('p').textContent = messageData.text;
                     // Perbarui timestamp jika ditampilkan
+                    const displayDate = getDisplayDate(messageData.timestamp);
+                    const formattedTime = displayDate ? displayDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...';
+                    existingMsgElement.querySelector('span.text-xs').textContent = formattedTime;
                 }
             } else if (change.type === "removed") {
                 // Hapus dari cache dan UI
                 forumMessagesDB.removeItem(messageData.id);
                 const removedElement = Array.from(forumMessages.children).find(child => {
-                    const span = child.querySelector('span.forum-username');
-                    return span && span.parentElement.parentElement.querySelector('p').textContent === messageData.text &&
-                           span.dataset.userId === messageData.userId;
+                    const pElement = child.querySelector('p');
+                    return pElement && pElement.textContent === messageData.text &&
+                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
                 });
                 if (removedElement) {
                     removedElement.remove();
@@ -484,7 +493,11 @@ async function startForumListeners() {
         });
 
         // Urutkan pesan baru berdasarkan timestamp dan tambahkan ke UI
-        newMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        newMessages.sort((a, b) => {
+            const timeA = getDisplayDate(a.timestamp)?.getTime() || 0;
+            const timeB = getDisplayDate(b.timestamp)?.getTime() || 0;
+            return timeA - timeB;
+        });
         newMessages.forEach(msg => displayChatMessage(msg, forumMessages, false));
 
         // Perbarui lastVisibleForumMessage untuk paginasi
@@ -531,7 +544,11 @@ async function loadOlderForumMessages() {
             forumMessagesDB.setItem(messageData.id, messageData); // Cache old messages
         });
 
-        oldMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0)); // Urutkan dari yang tertua ke terbaru
+        oldMessages.sort((a, b) => {
+            const timeA = getDisplayDate(a.timestamp)?.getTime() || 0;
+            const timeB = getDisplayDate(b.timestamp)?.getTime() || 0;
+            return timeA - timeB;
+        }); // Urutkan dari yang tertua ke terbaru
 
         // Tambahkan pesan ke bagian atas
         const currentScrollHeight = forumMessages.scrollHeight;
@@ -762,7 +779,11 @@ async function loadPrivateMessagesFromCache(chatId) {
                 cachedMessages.push(value);
             }
         });
-        cachedMessages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        cachedMessages.sort((a, b) => {
+            const timeA = getDisplayDate(a.timestamp)?.getTime() || 0;
+            const timeB = getDisplayDate(b.timestamp)?.getTime() || 0;
+            return timeA - timeB;
+        });
 
         if (cachedMessages.length > 0) {
             privateChatMessages.innerHTML = ''; // Clear loading message
@@ -973,8 +994,7 @@ function listenForActivePrivateChats() {
 }
 
 // Logika Permintaan Obrolan Pribadi
-// Removed 'let' here as it's declared globally
-// let incomingChatRequestsListener; // THIS LINE WAS REMOVED
+// `incomingChatRequestsListener` dideklarasikan secara global di bagian atas file.
 
 async function listenForIncomingChatRequests() {
     if (incomingChatRequestsListener) incomingChatRequestsListener(); // Unsubscribe previous listener
@@ -999,7 +1019,7 @@ async function listenForIncomingChatRequests() {
             snapshot.forEach((docSnap) => {
                 const request = docSnap.data();
                 const requestId = docSnap.id;
-                const expiresAtDate = request.expiresAt ? request.expiresAt.toDate() : null;
+                const expiresAtDate = request.expiresAt ? getDisplayDate(request.expiresAt) : null;
 
                 // Filter out expired requests client-side
                 if (expiresAtDate && expiresAtDate < now) {
@@ -1374,7 +1394,7 @@ async function checkAndShowRewardedAdForForum() {
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
         const userData = userDoc.data();
-        lastForumAdShown = userData.lastForumAdShown ? userData.lastForumAdShown.toDate().getTime() : 0;
+        lastForumAdShown = userData.lastForumAdShown ? getDisplayDate(userData.lastForumAdShown).getTime() : 0;
     }
 
     const now = Date.now();
