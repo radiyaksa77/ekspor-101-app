@@ -1508,3 +1508,57 @@ contactSupportBtn.addEventListener('click', () => {
 
 // --- Inisialisasi Aplikasi ---
 window.onload = initializeFirebase;
+
+
+// === [FORUM AUTO ACCESS + COUNTDOWN] ===
+const FORUM_AD_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
+
+function autoEnableForumIfAdWatchedToday() {
+    const now = Date.now();
+
+    const fetchAdStatus = async () => {
+        const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const lastAdTime = userData.lastForumAdShown ? userData.lastForumAdShown.toDate().getTime() : 0;
+            const remaining = lastAdTime + FORUM_AD_COOLDOWN - now;
+
+            if (remaining > 0) {
+                console.log("Forum auto-access granted after login. Ad was watched.");
+                startForumListeners();
+                setupOnlinePresence();
+                startForumAdCountdown(remaining);
+            } else {
+                console.log("Forum ad expired. Ad must be watched again.");
+            }
+        }
+    };
+
+    fetchAdStatus().catch(console.error);
+}
+
+function startForumAdCountdown(remainingTimeMs) {
+    const forumAdTimer = document.getElementById('forumAdTimer');
+    if (!forumAdTimer) return;
+
+    function update() {
+        const now = Date.now();
+        const end = parseInt(localStorage.getItem('lastForumAdShown')) + FORUM_AD_COOLDOWN;
+        const diff = end - now;
+
+        if (diff <= 0) {
+            forumAdTimer.classList.add('hidden');
+            return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        forumAdTimer.textContent = `${hours}j ${minutes}m`;
+        forumAdTimer.classList.remove('hidden');
+
+        setTimeout(update, 60000); // Update every minute
+    }
+
+    update();
+}
