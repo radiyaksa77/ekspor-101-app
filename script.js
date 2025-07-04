@@ -39,7 +39,7 @@ const authError = document.getElementById('authError');
 const authErrorMessage = document.getElementById('authErrorMessage');
 // const logoutBtn = document.getElementById('logoutBtn'); // Moved to profile area
 const userIdDisplay = document.getElementById('userIdDisplay'); // This will now be primarily for showing the user's ID within the profile page
-const currentUserIdDisplay = document.getElementById('currentUserId'); // This element will be removed from header display logic
+// const currentUserIdDisplay = document.getElementById('currentUserId'); // This element will be removed from header display logic
 
 // Tombol Navigasi
 const navForum = document.getElementById('navForum');
@@ -99,7 +99,7 @@ const newPasswordInput = document.getElementById('newPasswordInput');
 const updateUserPasswordBtn = document.getElementById('updatePasswordBtn'); // Renamed to avoid conflict
 const profileUpdateMessage = document.getElementById('profileUpdateMessage');
 const findUserInput = document.getElementById('findUserInput');
-const findUserBtn = document.getElementById('findUserBtn');
+const findUserBtn = document = document.getElementById('findUserBtn');
 const findUserMessage = document.getElementById('findUserMessage');
 const foundUserProfile = document.getElementById('foundUserProfile');
 const foundUsernameDisplay = document.getElementById('foundUsername');
@@ -1738,8 +1738,6 @@ async function initializeFirebase() {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
-                // currentUserIdDisplay.textContent = `ID Anda: ${userId}`; // Removed from header display
-
                 // Fetch user profile from Firestore to get username, randomUserId, and role
                 const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
                 const userDoc = await getDoc(userDocRef);
@@ -1793,7 +1791,6 @@ async function initializeFirebase() {
                 authPage.classList.remove('hidden');
                 mainApp.classList.add('hidden');
                 userIdDisplay.classList.add('hidden');
-                currentUserIdDisplay.textContent = ''; // Clear display
 
                 // Stop all listeners when user logs out
                 if (forumMessagesListener) forumMessagesListener();
