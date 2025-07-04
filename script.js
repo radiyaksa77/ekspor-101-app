@@ -30,7 +30,7 @@ let userRandomId = null; // ID acak pengguna
 const authPage = document.getElementById('authPage');
 const mainApp = document.getElementById('mainApp');
 const emailInput = document.getElementById('emailInput');
-const passwordInput = document = document.getElementById('passwordInput'); // Corrected typo here
+const passwordInput = document.getElementById('passwordInput'); // Corrected typo here
 const authSubmitBtn = document.getElementById('authSubmitBtn');
 const toggleAuthBtn = document.getElementById('toggleAuthBtn');
 const authTitle = document.getElementById('authTitle');
@@ -95,7 +95,7 @@ const profileMessageCountDisplay = document.getElementById('profileMessageCount'
 const newUsernameInput = document.getElementById('newUsernameInput');
 const updateUsernameBtn = document.getElementById('updateUsernameBtn');
 const newPasswordInput = document.getElementById('newPasswordInput');
-const updatePasswordBtn = document.getElementById('updatePasswordBtn');
+const updateUserPasswordBtn = document.getElementById('updatePasswordBtn'); // Renamed to avoid conflict
 const profileUpdateMessage = document.getElementById('profileUpdateMessage');
 const findUserInput = document.getElementById('findUserInput');
 const findUserBtn = document.getElementById('findUserBtn');
@@ -1220,7 +1220,8 @@ async function updateUsername() {
     }
 }
 
-async function updatePassword() {
+// Renamed function to avoid conflict with Firebase SDK's updatePassword
+async function updateUserPassword() {
     const newPass = newPasswordInput.value.trim();
     if (!newPass || newPass.length < 6) {
         showMessageBox('Kata sandi baru harus minimal 6 karakter.', 'warning', profileUpdateMessage, profileUpdateMessage);
@@ -1238,7 +1239,7 @@ async function updatePassword() {
 
         const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
         await reauthenticateWithCredential(auth.currentUser, credential);
-        await updatePassword(auth.currentUser, newPass);
+        await updatePassword(auth.currentUser, newPass); // Using the Firebase SDK updatePassword
         showMessageBox('Kata sandi berhasil diperbarui!', 'success', profileUpdateMessage, profileUpdateMessage);
         newPasswordInput.value = ''; // Clear password field
     } catch (error) {
@@ -1484,7 +1485,7 @@ privateMessageForm.addEventListener('submit', sendPrivateMessage);
 
 // Profil
 updateUsernameBtn.addEventListener('click', updateUsername);
-updatePasswordBtn.addEventListener('click', updatePassword);
+updateUserPasswordBtn.addEventListener('click', updateUserPassword); // Updated to new function name
 findUserBtn.addEventListener('click', findUser);
 sendPmRequestBtn.addEventListener('click', async () => {
     const recipientId = sendPmRequestBtn.dataset.recipientId;
@@ -1508,57 +1509,3 @@ contactSupportBtn.addEventListener('click', () => {
 
 // --- Inisialisasi Aplikasi ---
 window.onload = initializeFirebase;
-
-
-// === [FORUM AUTO ACCESS + COUNTDOWN] ===
-const FORUM_AD_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
-
-function autoEnableForumIfAdWatchedToday() {
-    const now = Date.now();
-
-    const fetchAdStatus = async () => {
-        const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const lastAdTime = userData.lastForumAdShown ? userData.lastForumAdShown.toDate().getTime() : 0;
-            const remaining = lastAdTime + FORUM_AD_COOLDOWN - now;
-
-            if (remaining > 0) {
-                console.log("Forum auto-access granted after login. Ad was watched.");
-                startForumListeners();
-                setupOnlinePresence();
-                startForumAdCountdown(remaining);
-            } else {
-                console.log("Forum ad expired. Ad must be watched again.");
-            }
-        }
-    };
-
-    fetchAdStatus().catch(console.error);
-}
-
-function startForumAdCountdown(remainingTimeMs) {
-    const forumAdTimer = document.getElementById('forumAdTimer');
-    if (!forumAdTimer) return;
-
-    function update() {
-        const now = Date.now();
-        const end = parseInt(localStorage.getItem('lastForumAdShown')) + FORUM_AD_COOLDOWN;
-        const diff = end - now;
-
-        if (diff <= 0) {
-            forumAdTimer.classList.add('hidden');
-            return;
-        }
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        forumAdTimer.textContent = `${hours}j ${minutes}m`;
-        forumAdTimer.classList.remove('hidden');
-
-        setTimeout(update, 60000); // Update every minute
-    }
-
-    update();
-}
