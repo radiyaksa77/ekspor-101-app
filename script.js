@@ -62,7 +62,7 @@ const forumMessages = document.getElementById('forumMessages');
 const forumMessageInput = document.getElementById('forumMessageInput');
 const forumMessageForm = document.getElementById('forumMessageForm');
 const loadMoreForumMessagesBtn = document.getElementById('loadMoreForumMessagesBtn');
-// const forumAdTimerDisplay = document.getElementById('forumAdTimer'); // Removed as rewarded ads are removed
+// forumAdTimerDisplay dihapus karena iklan berhadiah dihapus
 
 let lastVisibleForumMessage = null; // Untuk paginasi forum, dideklarasikan sekali di sini
 const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
@@ -233,7 +233,7 @@ function displayChatMessage(message, targetElement, isPrivate = false, prepend =
     }
 
     messageElement.innerHTML = `
-        <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
+        <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}" data-message-id="${message.id}">
             <div class="flex items-center ${isCurrentUser ? 'flex-row-reverse' : ''}">
                 <span class="${nameClasses} ${isPrivate ? '' : 'cursor-pointer forum-username'}" data-user-id="${message.userId}" data-username="${message.username}">${usernameDisplay}</span>
                 ${deleteButtonHtml}
@@ -509,40 +509,28 @@ async function startForumListeners() {
             if (change.type === "added") {
                 // Periksa apakah pesan sudah ada di UI (dari cache atau sebelumnya)
                 // Ini adalah pemeriksaan sederhana, mungkin perlu lebih canggih untuk menghindari duplikasi sempurna
-                const existsInUI = Array.from(forumMessages.children).some(child => {
-                    const pElement = child.querySelector('p');
-                    return pElement && pElement.textContent === messageData.text &&
-                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
-                });
+                const existsInUI = Array.from(forumMessages.children).some(child => child.dataset.messageId === messageData.id);
 
                 if (!existsInUI) {
                     newMessages.push(messageData);
                 }
                 forumMessagesDB.setItem(messageData.id, messageData); // Simpan/perbarui ke cache
             } else if (change.type === "modified") {
-                // Perbarui di cache dan UI jika perlu
                 forumMessagesDB.setItem(messageData.id, messageData);
-                const existingMsgElement = Array.from(forumMessages.children).find(child => {
-                    const pElement = child.querySelector('p');
-                    return pElement && pElement.textContent === messageData.text &&
-                           child.querySelector('.forum-username')?.dataset.userId === messageData.userId;
-                });
+                const existingMsgElement = Array.from(forumMessages.children).find(child => child.dataset.messageId === messageData.id);
                 if (existingMsgElement) {
                     // Perbarui konten elemen yang ada
                     existingMsgElement.querySelector('p').textContent = messageData.text;
-                    // Perbarui timestamp jika ditampilkan
                     const displayDate = getDisplayDate(messageData.timestamp);
                     const formattedTime = displayDate ? displayDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Mengirim...';
                     existingMsgElement.querySelector('span.text-xs').textContent = formattedTime;
+                    // Juga perbarui tampilan nama pengguna jika berubah (meskipun jarang untuk pesan yang sudah ada)
+                    existingMsgElement.querySelector('.forum-username').innerHTML = messageData.username + (messageData.userRole === 'official' ? ' <span class="text-xs bg-green-500 text-white px-1 rounded-full ml-1">Official</span>' : (messageData.userRole === 'admin' ? ' <span class="text-xs bg-red-500 text-white px-1 rounded-full ml-1">Admin</span>' : ''));
                 }
             } else if (change.type === "removed") {
                 // Hapus dari cache dan UI
                 forumMessagesDB.removeItem(messageData.id);
-                const removedElement = Array.from(forumMessages.children).find(child => {
-                    // Find by message ID if available, otherwise by content/user
-                    const deleteButton = child.querySelector('.delete-message-btn');
-                    return deleteButton && deleteButton.dataset.messageId === messageData.id;
-                });
+                const removedElement = Array.from(forumMessages.children).find(child => child.dataset.messageId === messageData.id);
                 if (removedElement) {
                     removedElement.remove();
                 }
@@ -966,10 +954,7 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
             } else if (change.type === "removed") {
                 privateMessagesDB.removeItem(messageData.id); // Remove from cache
                 // Remove message from UI
-                const removedElement = Array.from(privateChatMessages.children).find(child => {
-                    const deleteButton = child.querySelector('.delete-message-btn');
-                    return deleteButton && deleteButton.dataset.messageId === messageData.id;
-                });
+                const removedElement = Array.from(privateChatMessages.children).find(child => child.dataset.messageId === messageData.id);
                 if (removedElement) {
                     removedElement.remove();
                 }
@@ -1371,20 +1356,20 @@ async function updateUsername() {
     }
 
     try {
-        // Update username in Auth profile (if needed, though not directly used for display in this app)
-        await updateProfile(auth.currentUser, { displayName: newName });
+        // Menghapus panggilan updateProfile karena tidak langsung digunakan untuk tampilan di aplikasi ini
+        // dan dapat menyebabkan masalah autentikasi ulang yang tidak perlu.
 
-        // Update username in Firestore profile
+        // Perbarui nama pengguna di profil Firestore
         const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
         await updateDoc(userDocRef, { username: newName });
 
-        // Also update username in any active private chats where this user is a participant
+        // Perbarui juga nama pengguna di obrolan pribadi aktif di mana pengguna ini adalah peserta
         const privateChatsQuery = query(collection(db, `artifacts/${appId}/private_chats`), where('participants', 'array-contains', userId));
         const privateChatsSnapshot = await getDocs(privateChatsQuery);
         const updatePromises = [];
         privateChatsSnapshot.forEach(chatDoc => {
             const participantNames = chatDoc.data().participantNames;
-            if (participantNames[userId] !== newName) { // Only update if different
+            if (participantNames[userId] !== newName) { // Hanya perbarui jika berbeda
                 participantNames[userId] = newName;
                 updatePromises.push(updateDoc(doc(db, `artifacts/${appId}/private_chats`, chatDoc.id), { participantNames: participantNames }));
             }
@@ -1392,7 +1377,8 @@ async function updateUsername() {
         await Promise.all(updatePromises);
 
 
-        username = newName; // Update global variable
+        username = newName; // Perbarui variabel global
+        // profileUsernameDisplay akan diperbarui oleh listener onSnapshot untuk profil pengguna.
         showMessageBox('Nama pengguna berhasil diperbarui!', 'success', profileUpdateMessage, profileUpdateMessage);
     } catch (error) {
         console.error("Kesalahan saat memperbarui nama pengguna:", error);
