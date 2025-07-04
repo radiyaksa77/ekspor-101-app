@@ -62,7 +62,7 @@ const forumMessages = document.getElementById('forumMessages');
 const forumMessageInput = document.getElementById('forumMessageInput');
 const forumMessageForm = document.getElementById('forumMessageForm');
 const loadMoreForumMessagesBtn = document.getElementById('loadMoreForumMessagesBtn');
-const forumAdTimerDisplay = document.getElementById('forumAdTimer');
+// const forumAdTimerDisplay = document.getElementById('forumAdTimer'); // Removed as rewarded ads are removed
 
 let lastVisibleForumMessage = null; // Untuk paginasi forum, dideklarasikan sekali di sini
 const FORUM_MESSAGE_LIMIT = 20; // Jumlah pesan yang dimuat per halaman
@@ -99,7 +99,7 @@ const newPasswordInput = document.getElementById('newPasswordInput');
 const updateUserPasswordBtn = document.getElementById('updatePasswordBtn'); // Renamed to avoid conflict
 const profileUpdateMessage = document.getElementById('profileUpdateMessage');
 const findUserInput = document.getElementById('findUserInput');
-const findUserBtn = document.getElementById('findUserBtn'); // Corrected from document = document.getElementById
+const findUserBtn = document.getElementById('findUserBtn');
 const findUserMessage = document.getElementById('findUserMessage');
 const foundUserProfile = document.getElementById('foundUserProfile');
 const foundUsernameDisplay = document.getElementById('foundUsername');
@@ -415,8 +415,8 @@ function showPage(pageToShow) {
 
     // Tindakan spesifik saat menampilkan halaman
     if (pageToShow === forumPage) {
-        // Cek apakah perlu menampilkan iklan berhadiah
-        checkAndShowRewardedAdForForum();
+        // Forum sekarang selalu dapat diakses, tidak ada iklan berhadiah
+        startForumListeners();
     } else {
         if (forumMessagesListener) forumMessagesListener(); // Berhenti berlangganan
     }
@@ -475,11 +475,11 @@ async function loadForumMessagesFromCache() {
             scrollToBottom(forumMessages);
             console.log(`Memuat ${cachedMessages.length} pesan forum dari cache.`);
         } else {
-            forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Tidak ada pesan forum di cache. Memuat dari server...</div>`;
+            forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan forum di cache. Memuat dari server...</div>`;
         }
     } catch (err) {
-        console.error("Kesalahan saat memuat pesan forum dari cache:", err);
-        forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat dari cache.</div>`;
+        console.error("Gagal memuat pesan forum dari cache:", err);
+        forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Gagal memuat dari cache.</div>`;
     }
 }
 
@@ -570,8 +570,8 @@ async function startForumListeners() {
         console.log("Pesan forum diperbarui dari Firestore.");
 
     }, (error) => {
-        console.error("Kesalahan saat mendengarkan pesan forum:", error);
-        forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat pesan forum.</div>`;
+        console.error("Gagal memuat pesan forum:", error);
+        forumMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Gagal memuat pesan forum.</div>`;
     });
 }
 
@@ -623,7 +623,7 @@ async function loadOlderForumMessages() {
         console.log(`Memuat ${oldMessages.length} pesan forum lama.`);
 
     } catch (error) {
-        console.error("Kesalahan saat memuat pesan forum lama:", error);
+        console.error("Gagal memuat pesan forum lama:", error);
         showMessageBox("Gagal memuat pesan lama.", 'error', forumMessages.parentElement);
     }
 }
@@ -730,7 +730,7 @@ async function loadAllMembers() {
     allUsersListener = onSnapshot(q, (snapshot) => {
         memberList.innerHTML = '';
         if (snapshot.empty) {
-            memberList.innerHTML = `<li class="text-gray-500 text-sm italic">Tidak ada anggota lain ditemukan.</li>`;
+            memberList.innerHTML = `<li class="text-gray-500 text-sm italic">Belum ada anggota lain ditemukan.</li>`;
             return;
         }
         snapshot.forEach((userDoc) => {
@@ -757,8 +757,8 @@ async function loadAllMembers() {
             memberList.appendChild(listItem);
         });
     }, (error) => {
-        console.error("Kesalahan saat memuat anggota:", error);
-        memberList.innerHTML = `<li class="text-red-500 text-sm italic">Kesalahan saat memuat anggota.</li>`;
+        console.error("Gagal memuat anggota:", error);
+        memberList.innerHTML = `<li class="text-red-500 text-sm italic">Gagal memuat anggota.</li>`;
     });
 }
 
@@ -852,7 +852,7 @@ function updateActiveChatsUI() {
     activeChatCountDisplay.textContent = Object.keys(activePrivateChats).length;
 
     if (Object.keys(activePrivateChats).length === 0) {
-        activeChatsContainer.innerHTML = `<span class="text-gray-500 text-sm italic">Tidak ada obrolan aktif. Klik anggota untuk memulai!</span>`;
+        activeChatsContainer.innerHTML = `<span class="text-gray-500 text-sm italic">Belum ada obrolan aktif. Klik anggota untuk memulai!</span>`;
         return;
     }
 
@@ -912,11 +912,11 @@ async function loadPrivateMessagesFromCache(chatId) {
             scrollToBottom(privateChatMessages);
             console.log(`Memuat ${cachedMessages.length} pesan pribadi dari cache untuk chat ${chatId}.`);
         } else {
-            privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Tidak ada pesan pribadi di cache. Memuat dari server...</div>`;
+            privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan pribadi di cache. Memuat dari server...</div>`;
         }
     } catch (err) {
-        console.error("Kesalahan saat memuat pesan pribadi dari cache:", err);
-        privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat dari cache.</div>`;
+        console.error("Gagal memuat pesan pribadi dari cache:", err);
+        privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Gagal memuat dari cache.</div>`;
     }
 }
 
@@ -979,8 +979,8 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
         console.log("Pesan pribadi diperbarui dari Firestore.");
 
     }, (error) => {
-        console.error("Kesalahan saat mendengarkan pesan pribadi:", error);
-        privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Kesalahan saat memuat pesan pribadi.</div>`;
+        console.error("Gagal memuat pesan pribadi:", error);
+        privateChatMessages.innerHTML = `<div class="text-center text-red-500 text-sm italic">Gagal memuat pesan pribadi.</div>`;
     });
 }
 
@@ -1165,8 +1165,8 @@ function listenForActivePrivateChats() {
         });
         updateActiveChatsUI();
     }, (error) => {
-        console.error("Kesalahan saat mendengarkan obrolan pribadi aktif:", error);
-        showMessageBox("Kesalahan saat memuat obrolan pribadi aktif.", 'error', privateChatMessageBox, privateChatErrorMessage);
+        console.error("Gagal memuat obrolan pribadi aktif:", error);
+        showMessageBox("Gagal memuat obrolan pribadi aktif.", 'error', privateChatMessageBox, privateChatErrorMessage);
     });
 }
 
@@ -1190,7 +1190,7 @@ async function listenForIncomingChatRequests() {
         incomingRequestsList.innerHTML = '';
         let pendingRequestsCount = 0;
         if (snapshot.empty) {
-            incomingRequestsList.innerHTML = `<li class="text-gray-500 text-sm italic">Tidak ada permintaan obrolan masuk.</li>`;
+            incomingRequestsList.innerHTML = `<li class="text-gray-500 text-sm italic">Belum ada permintaan obrolan masuk.</li>`;
             privateChatRequestBadge.classList.add('hidden');
         } else {
             snapshot.forEach((docSnap) => {
@@ -1226,7 +1226,7 @@ async function listenForIncomingChatRequests() {
                 privateChatRequestBadge.classList.remove('hidden');
                 privateChatRequestBadge.textContent = pendingRequestsCount;
             } else {
-                incomingRequestsList.innerHTML = `<li class="text-gray-500 text-sm italic">Tidak ada permintaan obrolan masuk.</li>`;
+                incomingRequestsList.innerHTML = `<li class="text-gray-500 text-sm italic">Belum ada permintaan obrolan masuk.</li>`;
                 privateChatRequestBadge.classList.add('hidden');
             }
         }
@@ -1240,8 +1240,8 @@ async function listenForIncomingChatRequests() {
         });
 
     }, (error) => {
-        console.error("Error listening for incoming chat requests:", error);
-        incomingRequestsList.innerHTML = `<li class="text-red-500 text-sm italic">Kesalahan saat memuat permintaan obrolan masuk.</li>`;
+        console.error("Gagal memuat permintaan obrolan masuk:", error);
+        incomingRequestsList.innerHTML = `<li class="text-red-500 text-sm italic">Gagal memuat permintaan obrolan masuk.</li>`;
         privateChatRequestBadge.classList.add('hidden');
     });
 }
@@ -1294,7 +1294,7 @@ async function handleChatRequest(requestId, action, senderId = null, senderUsern
             showMessageBox("Permintaan obrolan ditolak.", 'success', privateChatMessageBox, privateChatErrorMessage);
         }
     } catch (error) {
-        console.error(`Error handling chat request (${action}):`, error);
+        console.error(`Gagal menangani permintaan obrolan (${action}):`, error);
         showMessageBox(`Gagal ${action === 'accept' ? 'menerima' : 'menolak'} permintaan.`, 'error', privateChatMessageBox, privateChatErrorMessage);
     }
 }
@@ -1348,11 +1348,11 @@ async function loadUserProfile() {
                     userRole = 'user';
                     profileUsernameDisplay.textContent = username;
                     profileUserIdDisplay.textContent = userRandomId;
-                }).catch(e => console.error("Error creating user profile:", e));
+                }).catch(e => console.error("Gagal membuat profil pengguna:", e));
             }
         }
     }, (error) => {
-        console.error("Kesalahan saat memuat profil pengguna:", error);
+        console.error("Gagal memuat profil pengguna:", error);
         profileUsernameDisplay.textContent = 'Kesalahan';
         profileUserIdDisplay.textContent = 'Kesalahan';
         profileMessageCountDisplay.textContent = 'Kesalahan';
@@ -1395,7 +1395,7 @@ async function updateUsername() {
         username = newName; // Update global variable
         showMessageBox('Nama pengguna berhasil diperbarui!', 'success', profileUpdateMessage, profileUpdateMessage);
     } catch (error) {
-        console.error("Error updating username:", error);
+        console.error("Kesalahan saat memperbarui nama pengguna:", error);
         showMessageBox('Gagal memperbarui nama pengguna: ' + error.message, 'error', profileUpdateMessage, profileUpdateMessage);
     }
 }
@@ -1423,7 +1423,7 @@ async function updateUserPassword() {
         showMessageBox('Kata sandi berhasil diperbarui!', 'success', profileUpdateMessage, profileUpdateMessage);
         newPasswordInput.value = ''; // Clear password field
     } catch (error) {
-        console.error("Error updating password:", error);
+        console.error("Kesalahan saat memperbarui kata sandi:", error);
         let errorMessage = 'Gagal memperbarui kata sandi: ' + error.message;
         if (error.code === 'auth/requires-recent-login') {
             errorMessage = 'Untuk memperbarui kata sandi, Anda harus login kembali. Silakan logout dan login lagi, lalu coba perbarui kata sandi Anda.';
@@ -1461,10 +1461,10 @@ async function displayOtherUserProfile(targetUserId, targetUsername) {
             showMessageBox('Profil pengguna tidak ditemukan.', 'error', findUserMessage, findUserMessage);
         }
     } catch (error) {
-        console.error("Error fetching other user profile:", error);
+        console.error("Kesalahan saat mengambil profil pengguna lain:", error);
         foundUserIdDisplay.textContent = 'Kesalahan';
         sendPmRequestBtn.classList.add('hidden');
-        showMessageBox('Kesalahan saat memuat profil pengguna.', 'error', findUserMessage, findUserMessage);
+        showMessageBox('Gagal memuat profil pengguna.', 'error', findUserMessage, findUserMessage);
     }
 }
 
@@ -1528,8 +1528,8 @@ async function findUser() {
             showMessageBox('Pengguna tidak ditemukan.', 'error', findUserMessage, findUserMessage);
         }
     } catch (error) {
-        console.error("Error finding user:", error);
-        showMessageBox('Kesalahan saat mencari pengguna.', 'error', findUserMessage, findUserMessage);
+        console.error("Kesalahan saat mencari pengguna:", error);
+        showMessageBox('Gagal mencari pengguna.', 'error', findUserMessage, findUserMessage);
     }
 }
 
@@ -1567,82 +1567,6 @@ function showInterstitialAd() {
     */
 }
 
-// Placeholder untuk menampilkan iklan berhadiah untuk forum
-let lastForumAdShown = 0; // Timestamp
-const FORUM_AD_COOLDOWN = 24 * 60 * 60 * 1000; // 24 jam dalam milidetik
-let adTimerInterval = null;
-
-async function checkAndShowRewardedAdForForum() {
-    const userDocRef = doc(db, `artifacts/${appId}/users`, userId);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        const userData = userDoc.data();
-        lastForumAdShown = userData.lastForumAdShown ? getDisplayDate(userData.lastForumAdShown).getTime() : 0;
-    }
-
-    const now = Date.now();
-    if (now - lastForumAdShown < FORUM_AD_COOLDOWN) {
-        console.log("Iklan berhadiah forum dalam masa cooldown.");
-        startForumAdCountdown(lastForumAdShown + FORUM_AD_COOLDOWN - now);
-        // Keep forum hidden until ad is ready or user waits
-        forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Anda perlu menonton iklan berhadiah untuk mengakses forum.</div>`;
-        forumMessageForm.classList.add('hidden');
-        loadMoreForumMessagesBtn.classList.add('hidden'); // Hide load more button
-        return;
-    }
-
-    // Attempt to show ad
-    console.log("Mencoba menampilkan iklan berhadiah untuk forum.");
-    showMessageBox("Memuat iklan berhadiah... (Simulasi)", 'info', authError, authErrorMessage, 3000);
-
-    // Simulate ad loading success/failure
-    const adLoadSuccess = Math.random() > 0.2; // 80% success rate
-    setTimeout(async () => {
-        if (adLoadSuccess) {
-            console.log("Iklan berhadiah berhasil ditampilkan.");
-            showMessageBox("Iklan berhadiah berhasil! Anda sekarang dapat mengakses forum.", 'success', authError, authErrorMessage, 3000);
-            await updateDoc(userDocRef, { lastForumAdShown: serverTimestamp() });
-            startForumListeners(); // Start forum listeners only after ad success
-            forumMessageForm.classList.remove('hidden');
-            forumAdTimerDisplay.classList.add('hidden');
-        } else {
-            console.log("Iklan berhadiah gagal dimuat.");
-            showMessageBox("Iklan berhadiah gagal dimuat. Silakan coba lagi nanti.", 'error', authError, authErrorMessage, 3000);
-            // Start cooldown if ad fails to load
-            await updateDoc(userDocRef, { lastForumAdShown: serverTimestamp() }); // Treat failure as shown for cooldown
-            startForumAdCountdown(FORUM_AD_COOLDOWN); // Start full cooldown
-            forumMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Iklan gagal dimuat. Silakan coba lagi setelah timer.</div>`;
-            forumMessageForm.classList.add('hidden');
-            loadMoreForumMessagesBtn.classList.add('hidden'); // Hide load more button
-        }
-    }, 3000); // Simulate ad display time
-}
-
-function startForumAdCountdown(remainingTimeMs) {
-    if (adTimerInterval) clearInterval(adTimerInterval);
-
-    forumAdTimerDisplay.classList.remove('hidden');
-    const endTime = Date.now() + remainingTimeMs;
-
-    adTimerInterval = setInterval(() => {
-        const timeLeft = endTime - Date.now();
-        if (timeLeft <= 0) {
-            clearInterval(adTimerInterval);
-            forumAdTimerDisplay.classList.add('hidden');
-            navForum.classList.remove('opacity-50'); // Remove disabled visual
-            // Optionally, automatically show ad if user is on forum page
-            if (forumPage.classList.contains('hidden') === false) {
-                 checkAndShowRewardedAdForForum();
-            }
-        } else {
-            const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
-            const seconds = Math.floor((timeLeft / 1000) % 60);
-            forumAdTimerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            navForum.classList.add('opacity-50'); // Visually indicate disabled
-        }
-    }, 1000);
-}
-
 // --- Logika Papan Buletin ---
 let bulletinListener;
 
@@ -1674,8 +1598,8 @@ async function listenForBulletinUpdates() {
             bulletinBoard.appendChild(bulletinItem);
         });
     }, (error) => {
-        console.error("Kesalahan saat mendengarkan papan buletin:", error);
-        bulletinBoard.innerHTML = `<p class="text-center text-red-500 italic">Kesalahan saat memuat pengumuman.</p>`;
+        console.error("Gagal memuat pengumuman papan buletin:", error);
+        bulletinBoard.innerHTML = `<p class="text-center text-red-500 italic">Gagal memuat pengumuman.</p>`;
     });
 }
 
@@ -1770,7 +1694,7 @@ async function initializeFirebase() {
                         messageCount: 0,
                         role: userRole
                     });
-                    console.log("Profil pengguna Firestore dibuat untuk pengguna yang sudah ada di Auth.");
+                    console.log("Profil pengguna Firestore dibuat secara otomatis untuk pengguna yang sudah ada di Auth.");
                 }
 
                 // Show main app and hide auth page
@@ -1803,7 +1727,7 @@ async function initializeFirebase() {
             }
         });
     } catch (error) {
-        console.error("Kesalahan inisialisasi Firebase:", error);
+        console.error("Gagal menginisialisasi Firebase:", error);
         showMessageBox("Gagal menginisialisasi aplikasi. Coba lagi nanti.", 'error', authError, authErrorMessage, 10000);
     }
 }
