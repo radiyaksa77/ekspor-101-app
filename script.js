@@ -117,7 +117,7 @@ function scrollToBottom(element) {
 }
 
 // Fungsi untuk menampilkan pesan di UI obrolan
-function displayChatMessage(message, targetElement) {
+function displayChatMessage(message, targetElement, isPrivate = false) { // Added isPrivate parameter
     const messageElement = document.createElement('div');
     messageElement.classList.add('flex', 'items-start', 'space-x-2');
 
@@ -141,7 +141,7 @@ function displayChatMessage(message, targetElement) {
 
     messageElement.innerHTML = `
         <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
-            <span class="${nameClasses} cursor-pointer forum-username" data-user-id="${message.userId}" data-username="${message.username}">${message.username || 'Anonim'}</span>
+            <span class="${nameClasses} ${isPrivate ? '' : 'cursor-pointer forum-username'}" data-user-id="${message.userId}" data-username="${message.username}">${message.username || 'Anonim'}</span>
             <div class="${bubbleClasses}">
                 <p class="${textClasses}">${message.text}</p>
                 <span class="text-xs ${isCurrentUser ? 'text-blue-300' : 'text-gray-500'} mt-1 block">
@@ -154,7 +154,7 @@ function displayChatMessage(message, targetElement) {
     scrollToBottom(targetElement);
 
     // Add event listener for clicking username in forum
-    if (targetElement === forumMessages) { // Only for forum messages
+    if (!isPrivate) { // Only for forum messages
         messageElement.querySelector('.forum-username').addEventListener('click', (e) => {
             const clickedUserId = e.target.dataset.userId;
             const clickedUsername = e.target.dataset.username;
@@ -237,7 +237,7 @@ async function handleAuth() {
                 errorMessage = 'Format alamat email tidak valid.';
                 break;
             case 'auth/operation-not-allowed':
-                errorMessage = 'Email/kata sandi login tidak diaktifkan. Silakan hubungi dukungan.';
+                errorMessage = 'Login email/kata sandi tidak diaktifkan. Silakan hubungi dukungan.';
                 break;
             case 'auth/weak-password':
                 errorMessage = 'Kata sandi harus minimal 6 karakter.';
@@ -642,7 +642,7 @@ function selectPrivateChat(chatId, recipientId, recipientName) {
             privateChatMessages.innerHTML = `<div class="text-center text-gray-500 text-sm italic">Belum ada pesan di obrolan pribadi ini.</div>`;
         }
         snapshot.forEach((doc) => {
-            displayChatMessage(doc.data(), privateChatMessages);
+            displayChatMessage(doc.data(), privateChatMessages, true); // Pass true for private messages
         });
         scrollToBottom(privateChatMessages);
     }, (error) => {
@@ -783,7 +783,8 @@ function listenForActivePrivateChats() {
 }
 
 // Logika Permintaan Obrolan Pribadi
-let incomingChatRequestsListener;
+// Removed 'let' here as it's declared globally
+// let incomingChatRequestsListener; // THIS LINE WAS REMOVED
 
 async function listenForIncomingChatRequests() {
     if (incomingChatRequestsListener) incomingChatRequestsListener(); // Unsubscribe previous listener
