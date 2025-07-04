@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, where, getDocs, runTransaction, limit, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Localforage for IndexedDB caching
-import localforage from "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js";
+import "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"; // Changed import statement to bare import
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -113,19 +113,20 @@ const contactSupportBtn = document.getElementById('contactSupportBtn');
 const bannerAd = document.getElementById('bannerAd');
 
 // --- Inisialisasi IndexedDB dengan localforage ---
-const forumMessagesDB = localforage.createInstance({
+// Access localforage via window object since it's now a bare import
+const forumMessagesDB = window.localforage.createInstance({
     name: "ekspor101_app",
     storeName: "forum_messages",
     description: "Pesan forum yang di-cache secara lokal"
 });
 
-const privateMessagesDB = localforage.createInstance({
+const privateMessagesDB = window.localforage.createInstance({
     name: "ekspor101_app",
     storeName: "private_messages",
     description: "Pesan pribadi yang di-cache secara lokal"
 });
 
-const chatRequestsDB = localforage.createInstance({
+const chatRequestsDB = window.localforage.createInstance({
     name: "ekspor101_app",
     storeName: "chat_requests",
     description: "Permintaan obrolan pribadi yang di-cache secara lokal"
@@ -937,7 +938,7 @@ async function deletePrivateChat(chatId, recipientId) {
         const deleteMessagePromises = [];
         messageDocs.forEach(msgDoc => {
             deleteMessagePromises.push(deleteDoc(doc(db, `artifacts/${appId}/private_chats/${chatId}/messages`, msgDoc.id)));
-            privateMessagesDB.removeItem(msgDoc.id); // Hapus dari cache
+            privateMessagesDB.removeItem(msgDoc.id); // Hapus from cache
         });
         await Promise.all(deleteMessagePromises);
 
