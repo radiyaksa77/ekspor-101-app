@@ -1,0 +1,33 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f2f5; /* Light gray background */
+}
+/* Custom scrollbar for chat messages */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+.chat-messages::-webkit-scrollbar-track {
+    background: #e2e8f0; /* Light blue-gray */
+    border-radius: 10px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #94a3b8; /* Medium blue-gray */
+    border-radius: 10px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #64748b; /* Darker blue-gray */
+}
+
+/* Styles for navigation buttons */
+.nav-btn {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+}
+.nav-btn.active {
+    background-color: #e0f2fe; /* Light blue background for active */
+    color: #1d4ed8; /* Darker blue text for active */
+}
+.nav-btn:hover {
+    background-color: #f0f9ff; /* Even lighter blue on hover */
+}

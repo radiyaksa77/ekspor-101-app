@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ekspor 101 App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons (e.g., user, chat, book, dollar) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Link to your custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="flex flex-col h-screen antialiased">
+
+    <!-- User ID Display (for debugging/identification) -->
+    <div id="userIdDisplay" class="bg-blue-600 text-white p-3 text-center text-sm font-medium rounded-b-lg shadow-md hidden">
+        Your User ID: <span id="currentUserId">Loading...</span>
+        <button id="logoutBtn" class="ml-4 px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-md text-sm">Logout</button>
+    </div>
+
+    <!-- Login/Register Page -->
+    <div id="authPage" class="flex-1 flex flex-col items-center justify-center p-4 bg-gray-100">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center" id="authTitle">Login</h2>
+
+            <!-- Error Message Display -->
+            <div id="authError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
+                <span class="block sm:inline" id="authErrorMessage"></span>
+            </div>
+
+            <input type="email" id="emailInput" placeholder="Email"
+                   class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+            <input type="password" id="passwordInput" placeholder="Password"
+                   class="w-full p-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+
+            <button id="authSubmitBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 mb-4">
+                Login
+            </button>
+            <button id="toggleAuthBtn"
+                    class="w-full text-blue-600 hover:text-blue-800 font-semibold py-2 rounded-lg transition duration-300 ease-in-out">
+                Don't have an account? Register
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App Container (Hidden until authenticated) -->
+    <div id="mainApp" class="flex-1 flex flex-col hidden">
+        <!-- Main Navigation Bar -->
+        <nav class="bg-white p-4 shadow-lg flex justify-around items-center rounded-b-xl">
+            <button id="navForum" class="nav-btn flex flex-col items-center text-blue-600">
+                <i class="fas fa-comments text-2xl mb-1"></i>
+                <span class="text-xs font-semibold">Forum</span>
+            </button>
+            <button id="navEkspor101" class="nav-btn flex flex-col items-center text-gray-500">
+                <i class="fas fa-book text-2xl mb-1"></i>
+                <span class="text-xs font-semibold">Ekspor 101</span>
+            </button>
+            <button id="navPrivateChat" class="nav-btn flex flex-col items-center text-gray-500">
+                <i class="fas fa-user-friends text-2xl mb-1"></i>
+                <span class="text-xs font-semibold">Private Chat</span>
+            </button>
+            <button id="navProfile" class="nav-btn flex flex-col items-center text-gray-500">
+                <i class="fas fa-user-circle text-2xl mb-1"></i>
+                <span class="text-xs font-semibold">Profile</span>
+            </button>
+            <button id="navDonate" class="nav-btn flex flex-col items-center text-gray-500">
+                <i class="fas fa-hand-holding-usd text-2xl mb-1"></i>
+                <span class="text-xs font-semibold">Donate</span>
+            </button>
+        </nav>
+
+        <!-- Page Content Area -->
+        <div class="flex-1 overflow-hidden p-4">
+
+            <!-- Forum Page -->
+            <div id="forumPage" class="page-content flex flex-col h-full">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Universal Forum <span id="onlineCount" class="text-blue-500 text-xl">(0 Online)</span></h2>
+                <div id="forumMessages" class="flex-1 overflow-y-auto bg-white p-4 rounded-xl shadow-lg mb-4 flex flex-col space-y-3 chat-messages">
+                    <div class="text-center text-gray-500 text-sm italic">
+                        Loading forum messages...
+                    </div>
+                </div>
+                <form id="forumMessageForm" class="flex items-center bg-white p-3 rounded-xl shadow-lg">
+                    <input type="text" id="forumMessageInput" placeholder="Type your message..."
+                           class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                    <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-r-lg transition duration-300 ease-in-out transform hover:scale-105 ml-2">
+                        Send
+                    </button>
+                </form>
+            </div>
+
+            <!-- Ekspor 101 Page -->
+            <div id="ekspor101Page" class="page-content hidden flex flex-col h-full bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Ekspor 101 - Educational Content</h2>
+                <div class="text-center text-gray-600">
+                    <p class="mb-4">This section will feature a curated directory of educational articles, videos, and resources related to export and international trade.</p>
+                    <p class="text-xl font-semibold text-blue-500">Coming Soon!</p>
+                    <img src="https://placehold.co/300x200/ADD8E6/000000?text=Educational+Content" alt="Educational Content Placeholder" class="mx-auto mt-6 rounded-lg shadow-md">
+                </div>
+            </div>
+
+            <!-- Private Chat Page -->
+            <div id="privateChatPage" class="page-content hidden flex flex-col h-full">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Private Chats</h2>
+
+                <!-- Custom Message Box for Private Chat Limit -->
+                <div id="privateChatMessageBox" class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
+                    <span class="block sm:inline" id="privateChatErrorMessage"></span>
+                </div>
+
+                <div class="flex-1 flex flex-col lg:flex-row gap-4">
+                    <!-- User List -->
+                    <div class="lg:w-1/3 bg-white p-4 rounded-xl shadow-lg overflow-y-auto">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Members</h3>
+                        <ul id="memberList" class="space-y-2">
+                            <li class="text-gray-500 text-sm italic">Loading members...</li>
+                        </ul>
+                    </div>
+
+                    <!-- Active Private Chats / Selected Chat View -->
+                    <div class="lg:w-2/3 flex flex-col bg-white p-4 rounded-xl shadow-lg">
+                        <div id="activeChatsList" class="mb-4">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Your Active Private Chats (<span id="activeChatCount">0</span>/3)</h3>
+                            <div id="activeChatsContainer" class="flex flex-wrap gap-2">
+                                <span class="text-gray-500 text-sm italic">No active chats. Click a member to start one!</span>
+                            </div>
+                        </div>
+
+                        <div id="selectedPrivateChatView" class="flex-1 flex flex-col border border-gray-200 rounded-lg p-3 hidden">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Chat with: <span id="privateChatRecipientName"></span></h3>
+                            <div id="privateChatMessages" class="flex-1 overflow-y-auto bg-gray-50 p-3 rounded-lg mb-3 flex flex-col space-y-3 chat-messages">
+                                <div class="text-center text-gray-500 text-sm italic">
+                                    Select a chat or start a new one.
+                                </div>
+                            </div>
+                            <form id="privateMessageForm" class="flex items-center">
+                                <input type="text" id="privateMessageInput" placeholder="Type your private message..."
+                                       class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                                <button type="submit"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-r-lg transition duration-300 ease-in-out transform hover:scale-105 ml-2">
+                                    Send
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profilePage" class="page-content hidden flex flex-col items-center justify-center h-full bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Your Profile</h2>
+                <div class="text-center">
+                    <p class="text-lg text-gray-700 mb-2">Username: <span id="profileUsername" class="font-semibold text-blue-600">Loading...</span></p>
+                    <p class="text-lg text-gray-700 mb-2">User ID: <span id="profileUserId" class="font-semibold text-gray-600">Loading...</span></p>
+                    <p class="text-lg text-gray-700 mt-4">Stats: <span class="font-semibold text-gray-500">Coming Soon!</span></p>
+                    <p class="text-sm text-gray-500 mt-2">Total Messages Sent: <span id="profileMessageCount">0</span></p>
+                    <!-- Add more stats here later -->
+                </div>
+            </div>
+
+            <!-- Donate Page -->
+            <div id="donatePage" class="page-content hidden flex flex-col items-center justify-center h-full bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Support Ekspor 101</h2>
+                <p class="text-lg text-gray-700 mb-6 text-center max-w-prose">
+                    Your generous contributions help us maintain and improve this app, bringing more valuable content and features to the Ekspor 101 community. Every donation, no matter how small, makes a big difference!
+                </p>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md text-center">
+                    <p class="text-xl font-semibold text-blue-600 mb-4">Scan to Donate:</p>
+                    <!-- Placeholder for QR Code -->
+                    <img src="https://placehold.co/200x200/28A745/FFFFFF?text=QR+Code+Here" alt="Donation QR Code" class="mx-auto rounded-lg shadow-md mb-4">
+                    <p class="text-sm text-gray-500">Thank you for your support!</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Link to your JavaScript file -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
