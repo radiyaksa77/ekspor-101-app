@@ -1,184 +1,46 @@
+/* Tailwind sudah menghandle hampir semua styling.
+   Ini hanya tambahan custom style di luar Tailwind. */
+
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f0f2f5;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Ensure body takes full viewport height */
-    margin: 0;
-    padding-bottom: 60px; /* Space for fixed banner ad */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 1rem;
-    flex-grow: 1; /* Allow content to grow and push footer/ad down */
-    display: flex;
-    flex-direction: column;
+
+.nav-button {
+  @apply px-4 py-2 rounded font-bold bg-slate-700 text-slate-50 hover:bg-slate-600;
 }
-.header {
-    background-color: #ffffff;
-    padding: 1rem;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky; /* Make header sticky */
-    top: 0;
-    z-index: 20; /* Ensure it's above other content */
-}
+
 .nav-button.active {
-    font-weight: bold;
-    color: #3b82f6; /* Tailwind blue-500 */
+  @apply bg-teal-600 text-white;
 }
+
 .page-content {
-    background-color: #ffffff;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    flex-grow: 1; /* Allow page content to fill available space */
-    margin-top: 1rem; /* Space from header */
+  @apply bg-slate-800 p-4 rounded-lg shadow-md;
 }
-.chat-messages {
-    height: 400px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1rem;
-    background-color: #f8fafc;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+
+.dark .page-content {
+  @apply bg-slate-800 text-slate-50;
 }
-.chat-input-form {
-    display: flex;
-    margin-top: 1rem;
+
+.light .page-content {
+  @apply bg-slate-100 text-slate-900;
 }
-.chat-input-form input {
-    flex-grow: 1;
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    margin-right: 0.5rem;
+
+textarea, input {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-.chat-input-form button {
-    padding: 0.75rem 1.25rem;
-    background-color: #3b82f6;
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
+
+.dark textarea,
+.dark input {
+  background-color: #334155;
+  color: #f8fafc;
 }
-.auth-card {
-    background-color: #ffffff;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    max-width: 400px;
-    margin: 2rem auto;
-    text-align: center;
+
+.light textarea,
+.light input {
+  background-color: #f1f5f9;
+  color: #1e293b;
 }
-.auth-card input {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-}
-.auth-card button {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #3b82f6;
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-.auth-error {
-    background-color: #fee2e2;
-    border: 1px solid #ef4444;
-    color: #dc2626;
-    padding: 0.75rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-.ad-banner {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #ffffff;
-    padding: 0.5rem 0;
-    text-align: center;
-    box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
-    z-index: 100; /* Ensure it's above other content */
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-}
-.ad-banner img {
-    max-width: 100%;
-    height: 50px; /* Fixed height for banner ad */
-    object-fit: contain;
-}
-.profile-section {
-    background-color: #f8fafc;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
-}
-.member-list {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1rem;
-    background-color: #f8fafc;
-}
-.member-list li {
-    padding: 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-.member-list li:last-child {
-    border-bottom: none;
-}
-.active-chats-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-.active-chats-container button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.delete-chat-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    align-items: center;
-}
-.delete-message-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    font-size: 0.8rem; /* Smaller icon for message delete */
-}
-.private-chat-view {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1rem;
-    background-color: #f8fafc;
-    margin-top: 1rem;
-}
-.bulletin-board {
-    margin-top: 1.5rem;
+
+#modalOverlay {
+  z-index: 1000;
 }
